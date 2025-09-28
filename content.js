@@ -65,10 +65,7 @@ function applyHighlights(highlightsData, highlightClass = 'smart-highlight') {
   return applyHighlightsSequentially(highlightsData, highlightClass, 0);
 }
 
-// Load Lucide icons
-const lucideScript = document.createElement('script');
-lucideScript.src = 'https://unpkg.com/lucide@latest/dist/umd/lucide.js';
-document.head.appendChild(lucideScript);
+// No external dependencies - using simple text icons
 
 // Inject CSS immediately
 const style = document.createElement('style');
@@ -105,16 +102,9 @@ style.textContent = `
     cursor: not-allowed;
     transform: none;
   }
-  .smart-highlights-button svg {
-    width: 20px;
-    height: 20px;
-  }
-  .spin {
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  .smart-highlights-button {
+    font-size: 16px;
+    font-weight: bold;
   }
   .smart-highlights-overlay {
     position: fixed;
@@ -137,26 +127,17 @@ floatingButton.className = 'smart-highlights-button';
 floatingButton.title = 'Smart Highlights';
 document.body.appendChild(floatingButton);
 
-// Set button icon after Lucide loads
-function setButtonIcon(iconName, spin = false) {
-  if (window.lucide) {
-    floatingButton.innerHTML = `<i data-lucide="${iconName}"></i>`;
-    lucide.createIcons();
-
-    if (spin) {
-      const svg = floatingButton.querySelector('svg');
-      if (svg) svg.classList.add('spin');
-    }
-  } else {
-    // Simple fallback text while Lucide loads
-    floatingButton.textContent = iconName === 'highlighter' ? 'H' : 'L';
-  }
+// Set button text icon
+function setButtonIcon(iconName) {
+  const icons = {
+    'highlighter': 'H',
+    'loader-2': '⟳'
+  };
+  floatingButton.textContent = icons[iconName] || 'H';
 }
 
-// Initialize with highlighter icon after Lucide loads
-lucideScript.onload = () => {
-  setTimeout(() => setButtonIcon('highlighter'), 100); // Small delay to ensure Lucide is ready
-};
+// Initialize button immediately
+setButtonIcon('highlighter');
 
 setTimeout(() => {
   // Pass 1: Tag elements
@@ -173,7 +154,7 @@ setTimeout(() => {
   // Basic extraction confirmation
   console.log(`Smart Highlights: Tagged ${targetElements.length} elements for processing`);
 
-  // Function to show status overlay with Lucide icons
+  // Function to show status overlay with text prefixes
   function showStatusOverlay(message, type = 'info') {
     const existing = document.querySelector('.smart-highlights-overlay');
     if (existing) existing.remove();
@@ -181,15 +162,15 @@ setTimeout(() => {
     const overlay = document.createElement('div');
     overlay.className = 'smart-highlights-overlay';
 
-    const icons = {
-      info: 'info',
-      success: 'check-circle',
-      warning: 'alert-circle',
-      error: 'x-circle'
+    const prefixes = {
+      info: '[i]',
+      success: '[✓]',
+      warning: '[!]',
+      error: '[×]'
     };
 
-    const iconName = icons[type] || icons.info;
-    overlay.innerHTML = `<i data-lucide="${iconName}" style="width: 16px; height: 16px; margin-right: 8px;"></i>${message}`;
+    const prefix = prefixes[type] || prefixes.info;
+    overlay.textContent = `${prefix} ${message}`;
 
     const colors = {
       info: 'rgba(0, 123, 255, 0.8)',
@@ -198,16 +179,8 @@ setTimeout(() => {
       error: 'rgba(255, 0, 0, 0.8)'
     };
     overlay.style.backgroundColor = colors[type] || colors.info;
-    overlay.style.display = 'flex';
-    overlay.style.alignItems = 'center';
 
     document.body.appendChild(overlay);
-
-    // Create icons for the overlay
-    if (window.lucide) {
-      lucide.createIcons();
-    }
-
     return overlay;
   }
 
@@ -218,7 +191,7 @@ setTimeout(() => {
 
     // Set loading state
     floatingButton.disabled = true;
-    setButtonIcon('loader-2', true);
+    setButtonIcon('loader-2');
     floatingButton.title = 'Processing...';
 
     // Show processing overlay
