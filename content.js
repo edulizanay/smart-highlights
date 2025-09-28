@@ -7,17 +7,9 @@
 // The 500ms delay ensures page has settled before we modify the DOM.
 // Two-pass approach (tag first, then query fresh elements) is essential for reliability.
 
-// Mock LLM response with paragraph-specific phrase targeting (kept for fallback)
-const mockLLMResponse = {
-  para_3: ["National Congress of American Indians", "1890 Battle of Wounded Knee"],
-  para_4: ["war crimes is not patriotic", "reconciliation"],
-  para_5: [], // No highlights for this paragraph
-  para_6: [], // No highlights for this paragraph
-  para_7: [], // No highlights for this paragraph
-};
 
 // Function to apply highlights based on LLM response
-function applyHighlights(highlightsData) {
+function applyHighlights(highlightsData, highlightClass = 'smart-highlight') {
   const taggedElements = document.querySelectorAll('[data-highlight-id]');
   let totalHighlights = 0;
   let processedParagraphs = 0;
@@ -37,7 +29,7 @@ function applyHighlights(highlightsData) {
     phrasesToHighlight.forEach(phrase => {
       const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escapedPhrase})`, 'gi');
-      const newHtml = html.replace(regex, '<span class="smart-highlight">$1</span>');
+      const newHtml = html.replace(regex, `<span class="${highlightClass}">$1</span>`);
 
       if (newHtml !== html) {
         html = newHtml;
@@ -121,47 +113,10 @@ setTimeout(() => {
   // Basic extraction confirmation
   console.log(`Smart Highlights: Tagged ${targetElements.length} elements for processing`);
 
-  // Pass 2: Query fresh and highlight based on LLM response
-  const taggedElements = document.querySelectorAll('[data-highlight-id]');
-  let totalHighlights = 0;
-  let processedParagraphs = 0;
-
-  taggedElements.forEach(element => {
-    const paragraphId = element.getAttribute('data-highlight-id');
-    const phrasesToHighlight = mockLLMResponse[paragraphId];
-
-    // Skip if paragraph not in LLM response or has no phrases
-    if (!phrasesToHighlight || phrasesToHighlight.length === 0) {
-      return;
-    }
-
-    let html = element.innerHTML;
-    let modified = false;
-
-    phrasesToHighlight.forEach(phrase => {
-      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedPhrase})`, 'gi');
-      const newHtml = html.replace(regex, '<span class="smart-highlight">$1</span>');
-
-      if (newHtml !== html) {
-        html = newHtml;
-        modified = true;
-        totalHighlights++;
-      }
-    });
-
-    if (modified) {
-      element.innerHTML = html;
-      processedParagraphs++;
-    }
-  });
-
-  // Basic highlighting completion
-  console.log(`Smart Highlights: Applied ${totalHighlights} highlights to ${processedParagraphs} paragraphs`);
-
   // Button click handler
   floatingButton.addEventListener('click', async () => {
     // Use the already-tagged elements from page load
+    const taggedElements = document.querySelectorAll('[data-highlight-id]');
     const extractedData = {};
 
     taggedElements.forEach(element => {
