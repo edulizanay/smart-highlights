@@ -189,6 +189,9 @@ setTimeout(() => {
     // Prevent double clicks
     if (floatingButton.disabled) return;
 
+    // Start timing
+    console.time('Total Processing');
+
     // Set loading state
     floatingButton.disabled = true;
     setButtonIcon('loader-2');
@@ -208,6 +211,7 @@ setTimeout(() => {
     });
 
     console.log('Sending paragraph data to backend...');
+    console.time('Network Request');
 
     try {
       // Send data to backend
@@ -220,6 +224,7 @@ setTimeout(() => {
       });
 
       const result = await response.json();
+      console.timeEnd('Network Request');
 
       if (response.ok) {
         // Check if we got LLM highlights
@@ -241,6 +246,7 @@ setTimeout(() => {
 
           // Show final success message after animations complete
           setTimeout(() => {
+            console.timeEnd('Total Processing');
             processingOverlay.remove();
             const successOverlay = showStatusOverlay(`Applied ${result.highlights.length} highlights`, 'success');
             setTimeout(() => successOverlay.remove(), 2000);
