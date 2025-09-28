@@ -31,6 +31,12 @@ app.post('/extract', async (req, res) => {
       paragraphs: paragraphs
     };
 
+    // Ensure logs directory exists
+    const logsDir = path.join(__dirname, 'logs');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir);
+    }
+
     const jsonFilePath = path.join(__dirname, 'logs', 'extracted-data.json');
     fs.writeFileSync(jsonFilePath, JSON.stringify(dataToSave, null, 2));
 
