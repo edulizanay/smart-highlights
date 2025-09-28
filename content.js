@@ -8,44 +8,67 @@
 // Two-pass approach (tag first, then query fresh elements) is essential for reliability.
 
 
-// Function to apply highlights based on LLM response
-function applyHighlights(highlightsData, highlightClass = 'smart-highlight') {
+// Function to apply highlights sequentially with animation
+function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-highlight', delay = 150) {
   const taggedElements = document.querySelectorAll('[data-highlight-id]');
   let totalHighlights = 0;
   let processedParagraphs = 0;
+  const allHighlights = [];
 
+  // First pass: collect all highlights to apply
   taggedElements.forEach(element => {
     const paragraphId = element.getAttribute('data-highlight-id');
     const phrasesToHighlight = highlightsData[paragraphId];
 
-    // Skip if paragraph not in highlights or has no phrases
     if (!phrasesToHighlight || phrasesToHighlight.length === 0) {
       return;
     }
 
-    let html = element.innerHTML;
-    let modified = false;
-
     phrasesToHighlight.forEach(phrase => {
-      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedPhrase})`, 'gi');
-      const newHtml = html.replace(regex, `<span class="${highlightClass}">$1</span>`);
-
-      if (newHtml !== html) {
-        html = newHtml;
-        modified = true;
-        totalHighlights++;
-      }
+      allHighlights.push({ element, phrase });
     });
-
-    if (modified) {
-      element.innerHTML = html;
-      processedParagraphs++;
-    }
   });
 
-  console.log(`Applied ${totalHighlights} highlights to ${processedParagraphs} paragraphs`);
+  // Second pass: apply highlights sequentially
+  allHighlights.forEach((highlight, index) => {
+    setTimeout(() => {
+      const { element, phrase } = highlight;
+      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedPhrase})`, 'gi');
+      const newHtml = element.innerHTML.replace(regex, `<span class="${highlightClass}" style="opacity: 0;">$1</span>`);
+
+      if (newHtml !== element.innerHTML) {
+        element.innerHTML = newHtml;
+        totalHighlights++;
+
+        // Fade in the highlight
+        const newHighlight = element.querySelector(`span.${highlightClass}[style*="opacity: 0"]`);
+        if (newHighlight) {
+          newHighlight.style.transition = 'opacity 0.3s ease-in';
+          newHighlight.style.opacity = '1';
+        }
+      }
+
+      // Log completion after last highlight
+      if (index === allHighlights.length - 1) {
+        processedParagraphs = document.querySelectorAll(`[data-highlight-id] .${highlightClass}`).length;
+        console.log(`Applied ${totalHighlights} highlights sequentially`);
+      }
+    }, index * delay);
+  });
+
+  return allHighlights.length;
 }
+
+// Legacy function for instant highlights (kept for compatibility)
+function applyHighlights(highlightsData, highlightClass = 'smart-highlight') {
+  return applyHighlightsSequentially(highlightsData, highlightClass, 0);
+}
+
+// Load Lucide icons
+const lucideScript = document.createElement('script');
+lucideScript.src = 'https://unpkg.com/lucide@latest/dist/umd/lucide.js';
+document.head.appendChild(lucideScript);
 
 // Inject CSS immediately
 const style = document.createElement('style');
@@ -68,14 +91,30 @@ style.textContent = `
     border-radius: 50%;
     cursor: pointer;
     z-index: 10000;
-    font-size: 16px;
     color: white;
     display: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
   }
-  .smart-highlights-button:hover {
+  .smart-highlights-button:hover:not(:disabled) {
     background: rgba(0, 123, 255, 1);
     transform: scale(1.05);
+  }
+  .smart-highlights-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .smart-highlights-button svg {
+    width: 20px;
+    height: 20px;
+  }
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
   .smart-highlights-overlay {
     position: fixed;
@@ -87,6 +126,7 @@ style.textContent = `
     border-radius: 5px;
     z-index: 10001;
     font-size: 14px;
+    transition: opacity 0.3s ease;
   }
 `;
 document.head.appendChild(style);
@@ -94,9 +134,32 @@ document.head.appendChild(style);
 // Create floating button
 const floatingButton = document.createElement('button');
 floatingButton.className = 'smart-highlights-button';
-floatingButton.innerHTML = '📝';
-floatingButton.title = 'Extract Paragraphs';
+floatingButton.title = 'Smart Highlights';
 document.body.appendChild(floatingButton);
+
+// Set button icon after Lucide loads
+function setButtonIcon(iconName, spin = false) {
+  if (window.lucide) {
+    const iconHtml = window.lucide.createIcons ?
+      `<i data-lucide="${iconName}"></i>` :
+      `<svg><use href="#${iconName}"/></svg>`;
+    floatingButton.innerHTML = iconHtml;
+
+    if (window.lucide.createIcons) {
+      window.lucide.createIcons();
+    }
+
+    if (spin) {
+      floatingButton.querySelector('svg').classList.add('spin');
+    }
+  } else {
+    // Fallback while Lucide loads
+    floatingButton.innerHTML = iconName === 'highlighter' ? '🖍️' : '⏳';
+  }
+}
+
+// Initialize with highlighter icon
+lucideScript.onload = () => setButtonIcon('highlighter');
 
 setTimeout(() => {
   // Pass 1: Tag elements
@@ -113,8 +176,40 @@ setTimeout(() => {
   // Basic extraction confirmation
   console.log(`Smart Highlights: Tagged ${targetElements.length} elements for processing`);
 
+  // Function to show status overlay
+  function showStatusOverlay(message, type = 'info') {
+    const existing = document.querySelector('.smart-highlights-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'smart-highlights-overlay';
+    overlay.textContent = message;
+
+    const colors = {
+      info: 'rgba(0, 123, 255, 0.8)',
+      success: 'rgba(0, 128, 0, 0.8)',
+      warning: 'rgba(255, 165, 0, 0.8)',
+      error: 'rgba(255, 0, 0, 0.8)'
+    };
+    overlay.style.backgroundColor = colors[type] || colors.info;
+
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
   // Button click handler
   floatingButton.addEventListener('click', async () => {
+    // Prevent double clicks
+    if (floatingButton.disabled) return;
+
+    // Set loading state
+    floatingButton.disabled = true;
+    setButtonIcon('loader-2', true);
+    floatingButton.title = 'Processing...';
+
+    // Show processing overlay
+    const processingOverlay = showStatusOverlay('Processing...', 'info');
+
     // Use the already-tagged elements from page load
     const taggedElements = document.querySelectorAll('[data-highlight-id]');
     const extractedData = {};
@@ -139,55 +234,55 @@ setTimeout(() => {
 
       const result = await response.json();
 
-      // Show success overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'smart-highlights-overlay';
-
       if (response.ok) {
         // Check if we got LLM highlights
         if (result.highlights) {
+          // Update status
+          processingOverlay.textContent = 'Applying highlights...';
+
           // Convert LLM highlights array to object format for highlighting
           const llmHighlights = {};
           result.highlights.forEach(highlight => {
             llmHighlights[highlight.id] = highlight.phrases;
           });
 
-          // Apply LLM highlights to the page
-          applyHighlights(llmHighlights);
+          // Apply LLM highlights with sequential animation
+          const highlightCount = applyHighlightsSequentially(llmHighlights);
 
-          overlay.textContent = `✓ Applied ${result.highlights.length} LLM highlights`;
-          overlay.style.backgroundColor = 'rgba(0, 128, 0, 0.8)';
+          // Calculate total animation time
+          const totalAnimationTime = highlightCount * 150 + 300; // 150ms per highlight + 300ms buffer
+
+          // Show final success message after animations complete
+          setTimeout(() => {
+            processingOverlay.remove();
+            const successOverlay = showStatusOverlay(`✓ Applied ${result.highlights.length} highlights`, 'success');
+            setTimeout(() => successOverlay.remove(), 2000);
+          }, totalAnimationTime);
+
           console.log('LLM highlights applied:', result.highlights);
         } else {
-          overlay.textContent = `✓ Sent ${result.paragraphCount} paragraphs (no highlights)`;
-          overlay.style.backgroundColor = 'rgba(255, 165, 0, 0.8)'; // Orange for partial success
+          processingOverlay.remove();
+          const warningOverlay = showStatusOverlay(`✓ Sent ${result.paragraphCount} paragraphs (no highlights)`, 'warning');
+          setTimeout(() => warningOverlay.remove(), 3000);
           console.log('Backend response (no highlights):', result);
         }
       } else {
-        overlay.textContent = `✗ Error: ${result.error}`;
-        overlay.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+        processingOverlay.remove();
+        const errorOverlay = showStatusOverlay(`✗ Error: ${result.error}`, 'error');
+        setTimeout(() => errorOverlay.remove(), 3000);
         console.error('Backend error:', result);
       }
 
-      document.body.appendChild(overlay);
-
-      setTimeout(() => {
-        overlay.remove();
-      }, 3000);
-
     } catch (error) {
       console.error('Failed to send data to backend:', error);
-
-      // Show error overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'smart-highlights-overlay';
-      overlay.textContent = '✗ Backend connection failed';
-      overlay.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
-      document.body.appendChild(overlay);
-
-      setTimeout(() => {
-        overlay.remove();
-      }, 3000);
+      processingOverlay.remove();
+      const errorOverlay = showStatusOverlay('✗ Backend connection failed', 'error');
+      setTimeout(() => errorOverlay.remove(), 3000);
+    } finally {
+      // Reset button state
+      floatingButton.disabled = false;
+      setButtonIcon('highlighter');
+      floatingButton.title = 'Smart Highlights';
     }
   });
 }, 500);
