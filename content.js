@@ -9,7 +9,7 @@
 
 
 // Function to apply highlights sequentially with animation
-function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-highlight', delay = 200) {
+function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-highlight', delay = 400) {
   const taggedElements = document.querySelectorAll('[data-highlight-id]');
   let totalHighlights = 0;
   let processedParagraphs = 0;
