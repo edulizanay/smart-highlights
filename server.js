@@ -31,7 +31,7 @@ app.post('/extract', async (req, res) => {
       paragraphs: paragraphs
     };
 
-    const jsonFilePath = path.join(__dirname, 'extracted-data.json');
+    const jsonFilePath = path.join(__dirname, 'logs', 'extracted-data.json');
     fs.writeFileSync(jsonFilePath, JSON.stringify(dataToSave, null, 2));
 
     // Log received data for debugging
@@ -44,7 +44,7 @@ app.post('/extract', async (req, res) => {
       const llmResult = await processWithLLM(paragraphs);
 
       // Save the raw response
-      const llmResponsePath = path.join(__dirname, 'llm-response.json');
+      const llmResponsePath = path.join(__dirname, 'logs', 'llm-response.json');
       fs.writeFileSync(llmResponsePath, JSON.stringify(llmResult.rawResponse, null, 2));
       console.log('LLM response saved to:', llmResponsePath);
 

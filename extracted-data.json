@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-09-28T07:17:37.009Z",
+  "paragraphCount": 13,
+  "paragraphs": {
+    "para_0": "Quickstart",
+    "para_1": "OpenRouter provides a unified API that gives you access to hundreds of AI models through a single endpoint, while automatically handling fallbacks and selecting the most cost-effective options. Get started with just a few lines of code using your preferred SDK or framework.",
+    "para_2": "Looking for information about free models and rate limits? Please see the FAQ",
+    "para_3": "In the examples below, the OpenRouter-specific headers are optional. Setting them allows your app to appear on the OpenRouter leaderboards. For detailed information about app attribution, see our App Attribution guide.",
+    "para_4": "Using the OpenAI SDK",
+    "para_5": "Using the OpenRouter API directly",
+    "para_6": "You can use the interactive Request Builder to generate OpenRouter API requests in the language of your choice.",
+    "para_7": "The API also supports streaming.",
+    "para_8": "Using third-party SDKs",
+    "para_9": "For information about using third-party SDKs and frameworks with OpenRouter, please see our frameworks documentation.",
+    "para_10": "Hi, I'm an AI assistant with access to documentation and other content.",
+    "para_11": "Tip: you can toggle this pane with",
+    "para_12": "+"
+  }
+}
