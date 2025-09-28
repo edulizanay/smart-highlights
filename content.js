@@ -9,7 +9,7 @@
 
 
 // Function to apply highlights sequentially with animation
-function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-highlight', delay = 150) {
+function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-highlight', delay = 200) {
   const taggedElements = document.querySelectorAll('[data-highlight-id]');
   let totalHighlights = 0;
   let processedParagraphs = 0;
@@ -140,26 +140,23 @@ document.body.appendChild(floatingButton);
 // Set button icon after Lucide loads
 function setButtonIcon(iconName, spin = false) {
   if (window.lucide) {
-    const iconHtml = window.lucide.createIcons ?
-      `<i data-lucide="${iconName}"></i>` :
-      `<svg><use href="#${iconName}"/></svg>`;
-    floatingButton.innerHTML = iconHtml;
-
-    if (window.lucide.createIcons) {
-      window.lucide.createIcons();
-    }
+    floatingButton.innerHTML = `<i data-lucide="${iconName}"></i>`;
+    lucide.createIcons();
 
     if (spin) {
-      floatingButton.querySelector('svg').classList.add('spin');
+      const svg = floatingButton.querySelector('svg');
+      if (svg) svg.classList.add('spin');
     }
   } else {
-    // Fallback while Lucide loads
-    floatingButton.innerHTML = iconName === 'highlighter' ? '🖍️' : '⏳';
+    // Simple fallback text while Lucide loads
+    floatingButton.textContent = iconName === 'highlighter' ? 'H' : 'L';
   }
 }
 
-// Initialize with highlighter icon
-lucideScript.onload = () => setButtonIcon('highlighter');
+// Initialize with highlighter icon after Lucide loads
+lucideScript.onload = () => {
+  setTimeout(() => setButtonIcon('highlighter'), 100); // Small delay to ensure Lucide is ready
+};
 
 setTimeout(() => {
   // Pass 1: Tag elements
@@ -176,14 +173,23 @@ setTimeout(() => {
   // Basic extraction confirmation
   console.log(`Smart Highlights: Tagged ${targetElements.length} elements for processing`);
 
-  // Function to show status overlay
+  // Function to show status overlay with Lucide icons
   function showStatusOverlay(message, type = 'info') {
     const existing = document.querySelector('.smart-highlights-overlay');
     if (existing) existing.remove();
 
     const overlay = document.createElement('div');
     overlay.className = 'smart-highlights-overlay';
-    overlay.textContent = message;
+
+    const icons = {
+      info: 'info',
+      success: 'check-circle',
+      warning: 'alert-circle',
+      error: 'x-circle'
+    };
+
+    const iconName = icons[type] || icons.info;
+    overlay.innerHTML = `<i data-lucide="${iconName}" style="width: 16px; height: 16px; margin-right: 8px;"></i>${message}`;
 
     const colors = {
       info: 'rgba(0, 123, 255, 0.8)',
@@ -192,8 +198,16 @@ setTimeout(() => {
       error: 'rgba(255, 0, 0, 0.8)'
     };
     overlay.style.backgroundColor = colors[type] || colors.info;
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
 
     document.body.appendChild(overlay);
+
+    // Create icons for the overlay
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
     return overlay;
   }
 
@@ -250,25 +264,25 @@ setTimeout(() => {
           const highlightCount = applyHighlightsSequentially(llmHighlights);
 
           // Calculate total animation time
-          const totalAnimationTime = highlightCount * 150 + 300; // 150ms per highlight + 300ms buffer
+          const totalAnimationTime = highlightCount * 200 + 300; // 200ms per highlight + 300ms buffer
 
           // Show final success message after animations complete
           setTimeout(() => {
             processingOverlay.remove();
-            const successOverlay = showStatusOverlay(`✓ Applied ${result.highlights.length} highlights`, 'success');
+            const successOverlay = showStatusOverlay(`Applied ${result.highlights.length} highlights`, 'success');
             setTimeout(() => successOverlay.remove(), 2000);
           }, totalAnimationTime);
 
           console.log('LLM highlights applied:', result.highlights);
         } else {
           processingOverlay.remove();
-          const warningOverlay = showStatusOverlay(`✓ Sent ${result.paragraphCount} paragraphs (no highlights)`, 'warning');
+          const warningOverlay = showStatusOverlay(`Sent ${result.paragraphCount} paragraphs (no highlights)`, 'warning');
           setTimeout(() => warningOverlay.remove(), 3000);
           console.log('Backend response (no highlights):', result);
         }
       } else {
         processingOverlay.remove();
-        const errorOverlay = showStatusOverlay(`✗ Error: ${result.error}`, 'error');
+        const errorOverlay = showStatusOverlay(`Error: ${result.error}`, 'error');
         setTimeout(() => errorOverlay.remove(), 3000);
         console.error('Backend error:', result);
       }
@@ -276,7 +290,7 @@ setTimeout(() => {
     } catch (error) {
       console.error('Failed to send data to backend:', error);
       processingOverlay.remove();
-      const errorOverlay = showStatusOverlay('✗ Backend connection failed', 'error');
+      const errorOverlay = showStatusOverlay('Backend connection failed', 'error');
       setTimeout(() => errorOverlay.remove(), 3000);
     } finally {
       // Reset button state
