@@ -1,0 +1,21 @@
+{
+  "name": "smart-highlights",
+  "version": "1.0.0",
+  "description": "Smart text highlighting extension with backend processing",
+  "main": "server.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {},
+  "keywords": ["browser-extension", "text-highlighting", "llm"],
+  "author": "",
+  "license": "MIT"
+}

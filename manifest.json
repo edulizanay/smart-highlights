@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Highlights",
+  "version": "1.0.0",
+  "description": "Smart text highlighting extension",
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}
