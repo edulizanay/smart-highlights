@@ -46,8 +46,10 @@ app.post('/extract', async (req, res) => {
     console.log(`Data saved to: ${jsonFilePath}`);
 
     // Send to OpenRouter LLM for highlighting analysis
+    console.time('LLM Processing');
     try {
       const llmResult = await processWithLLM(paragraphs);
+      console.timeEnd('LLM Processing');
 
       // Save the raw response
       const llmResponsePath = path.join(__dirname, 'logs', 'llm-response.json');
@@ -63,6 +65,7 @@ app.post('/extract', async (req, res) => {
       });
 
     } catch (error) {
+      console.timeEnd('LLM Processing');
       console.error('LLM processing error:', error.message);
 
       // Return success but without highlights if LLM processing fails

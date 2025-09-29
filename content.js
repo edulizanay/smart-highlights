@@ -35,7 +35,8 @@ function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-hig
       const { element, phrase } = highlight;
       const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escapedPhrase})`, 'gi');
-      const newHtml = element.innerHTML.replace(regex, `<span class="${highlightClass}" style="opacity: 0;">$1</span>`);
+      const textColor = getTextColor(currentHighlightColor);
+      const newHtml = element.innerHTML.replace(regex, `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`);
 
       if (newHtml !== element.innerHTML) {
         element.innerHTML = newHtml;
@@ -44,6 +45,10 @@ function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-hig
         // Fade in the highlight
         const newHighlight = element.querySelector(`span.${highlightClass}[style*="opacity: 0"]`);
         if (newHighlight) {
+          // Ensure background color and text color are set with !important
+          const textColor = getTextColor(currentHighlightColor);
+          newHighlight.style.setProperty('background-color', currentHighlightColor, 'important');
+          newHighlight.style.setProperty('color', textColor, 'important');
           newHighlight.style.transition = 'opacity 0.3s ease-in';
           newHighlight.style.opacity = '1';
         }
@@ -67,12 +72,19 @@ function applyHighlights(highlightsData, highlightClass = 'smart-highlight') {
 
 // No external dependencies - using simple text icons
 
-// Inject CSS immediately
+// Default highlight color (can be overridden by user preference)
+let currentHighlightColor = 'rgba(255, 255, 0, 0.5)'; // Default yellow
+
+// Create style element but don't inject yet
 const style = document.createElement('style');
-style.textContent = `
+
+// Function to inject/update CSS with current color
+function injectHighlightCSS() {
+  const textColor = getTextColor(currentHighlightColor);
+  style.textContent = `
   .smart-highlight {
-    background-color: yellow !important;
-    color: black !important;
+    background-color: ${currentHighlightColor};
+    color: ${textColor} !important;
     padding: 2px 4px !important;
     border-radius: 3px !important;
     font-weight: bold !important;
@@ -106,6 +118,42 @@ style.textContent = `
     font-size: 16px;
     font-weight: bold;
   }
+  .color-picker-popup {
+    position: fixed;
+    top: 70px;
+    right: 15px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10002;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .color-picker-popup.show {
+    display: flex;
+    opacity: 1;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .color-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .color-swatch:hover {
+    transform: scale(1.1);
+    border-color: #333;
+  }
+  .color-swatch.selected {
+    border-color: #0066ff;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+  }
   .smart-highlights-overlay {
     position: fixed;
     top: 70px;
@@ -119,13 +167,78 @@ style.textContent = `
     transition: opacity 0.3s ease;
   }
 `;
-document.head.appendChild(style);
+  // Append style if not already in document
+  if (!style.parentNode) {
+    document.head.appendChild(style);
+  }
+}
 
 // Create floating button
 const floatingButton = document.createElement('button');
 floatingButton.className = 'smart-highlights-button';
-floatingButton.title = 'Smart Highlights';
+floatingButton.title = '';
 document.body.appendChild(floatingButton);
+
+// Create color picker popup
+const colorPicker = document.createElement('div');
+colorPicker.className = 'color-picker-popup';
+
+// Define color palette with text color rules
+const colorPalette = [
+  { name: 'Yellow', color: 'rgba(255, 255, 0, 0.5)', textColor: 'black' },
+  { name: 'Green', color: 'rgba(0, 255, 0, 0.3)', textColor: 'black' },
+  { name: 'Orange', color: 'rgba(255, 165, 0, 0.5)', textColor: 'black' },
+  { name: 'Purple', color: 'rgba(150, 0, 255, 0.3)', textColor: 'white' },
+  { name: 'Red', color: 'rgba(255, 0, 0, 0.3)', textColor: 'white' }
+];
+
+// Helper function to get text color for a highlight color
+function getTextColor(backgroundColor) {
+  const colorConfig = colorPalette.find(c => c.color === backgroundColor);
+  return colorConfig ? colorConfig.textColor : 'black';
+}
+
+// Create color swatches
+colorPalette.forEach(({ name, color, textColor }) => {
+  const swatch = document.createElement('div');
+  swatch.className = 'color-swatch';
+  swatch.style.backgroundColor = color;
+  swatch.title = name;
+  swatch.dataset.color = color;
+  colorPicker.appendChild(swatch);
+});
+
+document.body.appendChild(colorPicker);
+
+// Hover timer for color picker
+let hoverTimer = null;
+
+// Function to update highlight color
+function updateHighlightColor(color) {
+  currentHighlightColor = color;
+  const textColor = getTextColor(color);
+
+  // Re-inject CSS with new color
+  injectHighlightCSS();
+
+  // Update existing highlights
+  document.querySelectorAll('.smart-highlight').forEach(highlight => {
+    highlight.style.backgroundColor = color;
+    highlight.style.color = textColor;
+  });
+
+  // Save to Chrome storage
+  chrome.storage.local.set({ highlightColor: color });
+}
+
+// Load saved color preference and inject CSS
+chrome.storage.local.get(['highlightColor'], (result) => {
+  if (result.highlightColor) {
+    currentHighlightColor = result.highlightColor;
+  }
+  // Inject CSS after we know the color
+  injectHighlightCSS();
+});
 
 // Set button text icon
 function setButtonIcon(iconName) {
@@ -184,10 +297,73 @@ setTimeout(() => {
     return overlay;
   }
 
+  // Button hover handlers for color picker
+  floatingButton.addEventListener('mouseenter', () => {
+    // Start 2-second timer
+    hoverTimer = setTimeout(() => {
+      colorPicker.classList.add('show');
+
+      // Update selected state
+      colorPicker.querySelectorAll('.color-swatch').forEach(swatch => {
+        if (swatch.dataset.color === currentHighlightColor) {
+          swatch.classList.add('selected');
+        } else {
+          swatch.classList.remove('selected');
+        }
+      });
+    }, 500);
+  });
+
+  floatingButton.addEventListener('mouseleave', () => {
+    // Cancel timer if mouse leaves
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  });
+
+  // Color picker hover handlers
+  colorPicker.addEventListener('mouseenter', () => {
+    // Keep picker open when hovering over it
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  });
+
+  colorPicker.addEventListener('mouseleave', () => {
+    // Close picker when mouse leaves
+    colorPicker.classList.remove('show');
+  });
+
+  // Color swatch click handler
+  colorPicker.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent event from bubbling to button or document
+
+    if (e.target.classList.contains('color-swatch')) {
+      const color = e.target.dataset.color;
+      updateHighlightColor(color);
+
+      // Update selected state
+      colorPicker.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.classList.remove('selected');
+      });
+      e.target.classList.add('selected');
+
+      // Close picker after selection
+      setTimeout(() => {
+        colorPicker.classList.remove('show');
+      }, 300);
+    }
+  });
+
   // Button click handler
   floatingButton.addEventListener('click', async () => {
     // Prevent double clicks
     if (floatingButton.disabled) return;
+
+    // Start timing
+    console.time('Total Processing');
 
     // Set loading state
     floatingButton.disabled = true;
@@ -208,6 +384,7 @@ setTimeout(() => {
     });
 
     console.log('Sending paragraph data to backend...');
+    console.time('Network Request');
 
     try {
       // Send data to backend
@@ -220,6 +397,7 @@ setTimeout(() => {
       });
 
       const result = await response.json();
+      console.timeEnd('Network Request');
 
       if (response.ok) {
         // Check if we got LLM highlights
@@ -241,6 +419,7 @@ setTimeout(() => {
 
           // Show final success message after animations complete
           setTimeout(() => {
+            console.timeEnd('Total Processing');
             processingOverlay.remove();
             const successOverlay = showStatusOverlay(`Applied ${result.highlights.length} highlights`, 'success');
             setTimeout(() => successOverlay.remove(), 2000);
@@ -269,7 +448,7 @@ setTimeout(() => {
       // Reset button state
       floatingButton.disabled = false;
       setButtonIcon('highlighter');
-      floatingButton.title = 'Smart Highlights';
+      floatingButton.title = '';
     }
   });
 }, 500);
