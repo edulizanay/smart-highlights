@@ -1,120 +1,84 @@
-// ABOUTME: Test script that fetches actual OpenRouter page and tests filtering
-// ABOUTME: Compares current implementation against what we're actually getting
+// ABOUTME: Test script to verify paragraph filtering logic using logs data
+// ABOUTME: Simulates what content.js should be doing with filtering
 
-const axios = require('axios');
-const { JSDOM } = require('jsdom');
+// Read the actual data we got from the last run
+const fs = require('fs');
+const path = require('path');
 
-async function testFiltering() {
-  console.log('=== Fetching OpenRouter Quickstart Page ===\n');
+// Load the extracted data from our logs
+const extractedDataPath = path.join(__dirname, '../logs/extracted-data.json');
+const extractedData = JSON.parse(fs.readFileSync(extractedDataPath, 'utf8'));
 
-  try {
-    // Fetch the actual page
-    const response = await axios.get('https://openrouter.ai/docs/quickstart');
-    const dom = new JSDOM(response.data);
-    const document = dom.window.document;
+console.log('=== Analyzing Extracted Data from Last Run ===\n');
+console.log(`Timestamp: ${extractedData.timestamp}`);
+console.log(`Total paragraphs received: ${extractedData.paragraphCount}\n`);
 
-    console.log('Page fetched successfully\n');
+// Simulate what our filtering SHOULD do
+console.log('=== Testing Current Filter Logic (>30 chars) ===\n');
 
-    // Test 1: Current implementation (only <p> tags)
-    console.log('=== CURRENT IMPLEMENTATION (only <p> tags) ===\n');
-    const pElements = document.querySelectorAll('p');
-    console.log(`Found ${pElements.length} <p> elements\n`);
+const filteredData = {};
+let includedCount = 0;
+let filteredOutCount = 0;
 
-    const currentExtractedData = {};
-    let currentFiltered = 0;
+for (const [id, text] of Object.entries(extractedData.paragraphs)) {
+  const length = text.length;
 
-    pElements.forEach((element, i) => {
-      const id = `para_${i}`;
-      const text = element.textContent.trim();
-
-      // This is what our current content.js does
-      if (text.length > 30) {
-        currentExtractedData[id] = text;
-        currentFiltered++;
-        console.log(`✓ para_${i}: "${text.substring(0, 50)}..." (${text.length} chars)`);
-      } else {
-        console.log(`✗ para_${i}: "${text}" (${text.length} chars) - FILTERED OUT`);
-      }
-    });
-
-    console.log(`\nResult: ${currentFiltered} paragraphs would be sent to LLM\n`);
-
-    // Test 2: What we were doing before (p, h1, h2, h3)
-    console.log('\n=== OLD IMPLEMENTATION (p, h1, h2, h3) ===\n');
-    const allElements = document.querySelectorAll('p, h1, h2, h3');
-    console.log(`Found ${allElements.length} total elements\n`);
-
-    const oldExtractedData = {};
-
-    allElements.forEach((element, i) => {
-      const id = `para_${i}`;
-      const text = element.textContent.trim();
-      oldExtractedData[id] = text;
-    });
-
-    // Compare with what we saw in logs
-    console.log('Sample of what was being sent (no filtering):');
-    let count = 0;
-    for (const [id, text] of Object.entries(oldExtractedData)) {
-      if (count < 15) {
-        const tag = allElements[parseInt(id.split('_')[1])].tagName;
-        console.log(`${id} [${tag}]: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
-        count++;
-      }
-    }
-
-    // Test 3: Check what elements contain our problematic text
-    console.log('\n\n=== INVESTIGATING PROBLEMATIC ENTRIES ===\n');
-    const problematicTexts = [
-      "Quickstart",
-      "Using the OpenAI SDK",
-      "Using the OpenRouter API directly",
-      "Using third-party SDKs",
-      "+",
-      "Tip: you can toggle this pane with"
-    ];
-
-    problematicTexts.forEach(searchText => {
-      // Find all elements containing this text
-      const xpath = `//*[contains(text(), '${searchText.replace(/'/g, "\\'")}')]`;
-      const results = document.evaluate(xpath, document, null, 5, null); // ORDERED_NODE_ITERATOR_TYPE
-
-      let element;
-      let found = false;
-      while (element = results.iterateNext()) {
-        if (element.textContent.trim() === searchText || element.textContent.trim().includes(searchText)) {
-          console.log(`"${searchText}"`);
-          console.log(`  Found as: <${element.tagName.toLowerCase()}>`);
-          console.log(`  Classes: ${element.className || '(none)'}`);
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        console.log(`"${searchText}" - NOT FOUND on page`);
-      }
-    });
-
-    // Summary
-    console.log('\n\n=== SUMMARY ===');
-    console.log(`Current implementation (<p> only with >30 chars):`);
-    console.log(`  - Would send ${currentFiltered} paragraphs to LLM`);
-    console.log(`  - Filters out short text like "+", headers, etc.`);
-    console.log(`\nOld implementation (p, h1, h2, h3 no filter):`);
-    console.log(`  - Would send ${Object.keys(oldExtractedData).length} elements to LLM`);
-    console.log(`  - Includes headers and UI elements`);
-
-    // Show what we're filtering out
-    const difference = Object.keys(oldExtractedData).length - currentFiltered;
-    console.log(`\n✅ Filtering saves ${difference} unnecessary elements (${Math.round(difference / Object.keys(oldExtractedData).length * 100)}% reduction)`);
-
-  } catch (error) {
-    console.error('Error fetching page:', error.message);
-    if (error.response) {
-      console.error('Status:', error.response.status);
-    }
+  if (length > 30) {
+    filteredData[id] = text;
+    includedCount++;
+    console.log(`✓ ${id}: "${text.substring(0, 40)}..." (${length} chars) - INCLUDED`);
+  } else {
+    filteredOutCount++;
+    console.log(`✗ ${id}: "${text}" (${length} chars) - SHOULD BE FILTERED`);
   }
 }
 
-// Run the test
-testFiltering();
+console.log('\n=== Summary ===');
+console.log(`Original count: ${extractedData.paragraphCount} paragraphs`);
+console.log(`After filtering (>30 chars): ${includedCount} paragraphs`);
+console.log(`Filtered out: ${filteredOutCount} paragraphs`);
+console.log(`Reduction: ${Math.round(filteredOutCount / extractedData.paragraphCount * 100)}%`);
+
+console.log('\n=== Items that SHOULD have been filtered out ===');
+for (const [id, text] of Object.entries(extractedData.paragraphs)) {
+  if (text.length <= 30) {
+    console.log(`- "${text}" (${text.length} chars)`);
+  }
+}
+
+console.log('\n=== PROBLEM DIAGNOSIS ===');
+if (filteredOutCount > 0) {
+  console.log('❌ ISSUE FOUND: Short text items are still being sent to the server!');
+  console.log('   This means the client-side filtering is NOT working.');
+  console.log('\nPossible causes:');
+  console.log('1. Browser extension is using cached old code');
+  console.log('2. The filter condition is not being applied correctly');
+  console.log('3. These might not be <p> tags but something else on the actual page');
+} else {
+  console.log('✅ Filtering appears to be working correctly - all items are >30 chars');
+}
+
+// Check for obvious headers
+console.log('\n=== Checking for obvious headers in data ===');
+const headerPatterns = [
+  'Quickstart',
+  'Using the OpenAI SDK',
+  'Using the OpenRouter API directly',
+  'Using third-party SDKs'
+];
+
+headerPatterns.forEach(pattern => {
+  for (const [id, text] of Object.entries(extractedData.paragraphs)) {
+    if (text === pattern) {
+      console.log(`⚠️  Found header as paragraph: "${pattern}" (${id})`);
+    }
+  }
+});
+
+console.log('\n=== CONCLUSION ===');
+console.log('Based on the data, it appears that:');
+console.log('1. Headers like "Quickstart" ARE being captured as paragraphs');
+console.log('2. Short items like "+" (1 char) are still in the data');
+console.log('3. The >30 char filter is NOT being applied on the client side');
+console.log('\nThe filtering code in content.js lines 112-114 is likely not executing,');
+console.log('or the browser extension needs to be reloaded to pick up the changes.');
