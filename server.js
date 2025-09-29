@@ -62,10 +62,11 @@ app.post('/extract', async (req, res) => {
     console.log(`Data saved to: ${jsonFilePath}`);
 
     // Send to OpenRouter LLM for highlighting analysis
-    console.time('LLM Processing');
+    const timerLabel = isChunkedRequest ? `LLM Processing Chunk ${chunkIndex}` : 'LLM Processing';
+    console.time(timerLabel);
     try {
       const llmResult = await processWithLLM(actualParagraphs);
-      console.timeEnd('LLM Processing');
+      console.timeEnd(timerLabel);
 
       // Save the raw response with chunk-specific filename
       const responseFileName = isChunkedRequest ?
@@ -100,7 +101,7 @@ app.post('/extract', async (req, res) => {
       });
 
     } catch (error) {
-      console.timeEnd('LLM Processing');
+      console.timeEnd(timerLabel);
       console.error('LLM processing error:', error.message);
 
       // Return success but without highlights if LLM processing fails
