@@ -1,18 +1,12 @@
-// ABOUTME: Content script for Smart Highlights Chrome extension
-// ABOUTME: Injects styling and functionality into web pages
-//
-// CRITICAL TIMING LESSON: innerHTML modifications must be delayed via setTimeout()
-// Even though content scripts run at document_end, pages often have JavaScript that
-// runs after us and reverts DOM changes. Direct innerHTML assignment fails silently.
-// The 500ms delay ensures page has settled before we modify the DOM.
-// Two-pass approach (tag first, then query fresh elements) is essential for reliability.
+// ABOUTME: Content script for Smart Highlights—injects UI and applies highlights.
+// TIMING: Even at document_end, defer DOM mutations (~500ms) so site JS doesn’t revert them.
+// RELIABILITY: Use a two-pass flow—tag elements first, then query fresh and apply changes.
 
 
 // Function to apply highlights sequentially with animation
 function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-highlight', delay = 400) {
   const taggedElements = document.querySelectorAll('[data-highlight-id]');
   let totalHighlights = 0;
-  let processedParagraphs = 0;
   const allHighlights = [];
 
   // First pass: collect all highlights to apply
@@ -45,8 +39,6 @@ function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-hig
         // Fade in the highlight
         const newHighlight = element.querySelector(`span.${highlightClass}[style*="opacity: 0"]`);
         if (newHighlight) {
-          // Ensure background color and text color are set with !important
-          const textColor = getTextColor(currentHighlightColor);
           newHighlight.style.setProperty('background-color', currentHighlightColor, 'important');
           newHighlight.style.setProperty('color', textColor, 'important');
           newHighlight.style.transition = 'opacity 0.3s ease-in';
@@ -54,11 +46,6 @@ function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-hig
         }
       }
 
-      // Log completion after last highlight
-      if (index === allHighlights.length - 1) {
-        processedParagraphs = document.querySelectorAll(`[data-highlight-id] .${highlightClass}`).length;
-        console.log(`Applied ${totalHighlights} highlights sequentially`);
-      }
     }, index * delay);
   });
 
@@ -177,10 +164,6 @@ function injectHighlightCSS() {
     border-radius: 50%;
     background-color: var(--swatch-color-opaque);
     z-index: 1;
-  }
-  .color-swatch:hover {
-    transform: scale(1.1);
-    border-color: #888;
   }
   .color-swatch:hover {
     transform: scale(1.1);
