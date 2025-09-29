@@ -63,6 +63,103 @@ let currentHighlightColor = 'rgba(255, 255, 0, 0.5)'; // Default yellow
 // Prevent double clicks without depending on UI internals
 let isProcessing = false;
 
+// Chunking logic for parallel LLM processing
+function chunkParagraphs(extractedData, maxChars = 500) {
+  const chunks = [];
+  const paragraphEntries = Object.entries(extractedData);
+
+  if (paragraphEntries.length === 0) {
+    return chunks;
+  }
+
+  let currentChunk = {
+    chunkIndex: 0,
+    totalChunks: 0, // Will be set after we know total count
+    paragraphs: {},
+    charCount: 0
+  };
+
+  for (const [paraId, text] of paragraphEntries) {
+    const textLength = text.length;
+
+    // If adding this paragraph would exceed maxChars AND we already have content,
+    // start a new chunk (but always include at least one paragraph per chunk)
+    if (currentChunk.charCount > 0 && currentChunk.charCount + textLength > maxChars) {
+      chunks.push(currentChunk);
+
+      // Start new chunk
+      currentChunk = {
+        chunkIndex: chunks.length,
+        totalChunks: 0,
+        paragraphs: {},
+        charCount: 0
+      };
+    }
+
+    // Add paragraph to current chunk
+    currentChunk.paragraphs[paraId] = text;
+    currentChunk.charCount += textLength;
+  }
+
+  // Add the last chunk if it has content
+  if (Object.keys(currentChunk.paragraphs).length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  // Set totalChunks for all chunks
+  const totalChunks = chunks.length;
+  chunks.forEach(chunk => {
+    chunk.totalChunks = totalChunks;
+  });
+
+  return chunks;
+}
+
+// Chunk Response Manager for coordinating parallel LLM responses
+class ChunkResponseManager {
+  constructor(totalChunks, applyHighlightsFunction) {
+    this.totalChunks = totalChunks;
+    this.applyHighlights = applyHighlightsFunction;
+    this.nextChunkToProcess = 0;
+    this.responses = new Map(); // chunkIndex -> highlights
+    this.processedChunks = new Set();
+  }
+
+  addResponse(chunkIndex, highlights) {
+    // Ignore duplicate responses
+    if (this.responses.has(chunkIndex)) {
+      return;
+    }
+
+    // Store the response
+    this.responses.set(chunkIndex, highlights);
+
+    // Process any ready chunks starting from nextChunkToProcess
+    this.processNextReady();
+  }
+
+  processNextReady() {
+    // Process chunks in order if they're ready
+    while (this.responses.has(this.nextChunkToProcess) &&
+           !this.processedChunks.has(this.nextChunkToProcess)) {
+
+      const highlights = this.responses.get(this.nextChunkToProcess);
+      this.processedChunks.add(this.nextChunkToProcess);
+
+      // Apply highlights if any exist
+      if (highlights && highlights.length > 0) {
+        this.applyHighlights(highlights);
+      }
+
+      this.nextChunkToProcess++;
+    }
+  }
+
+  isComplete() {
+    return this.processedChunks.size === this.totalChunks;
+  }
+}
+
 // Initialize UI after loading saved color, then wire callbacks
 chrome.storage.local.get(['highlightColor'], (result) => {
   if (result.highlightColor) {
@@ -106,59 +203,81 @@ async function handleButtonClick() {
     const extractedData = {};
 
     taggedElements.forEach(element => {
-      const id =
-    element.getAttribute('data-highlight-id');
+      const id = element.getAttribute('data-highlight-id');
       const text = element.textContent.trim();
       if (text.length > 30) {  // Filter out short UI text
         extractedData[id] = text;
       }
     });
 
-    console.log('Sending paragraph data to backend...');
-    console.time('Network Request');
+    // Chunk the data for parallel processing
+    const chunks = chunkParagraphs(extractedData, 500);
+    console.log(`Chunked ${Object.keys(extractedData).length} paragraphs into ${chunks.length} chunks`);
 
-    const response = await fetch('http://localhost:3000/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(extractedData)
+    if (chunks.length === 0) {
+      const warningOverlay = SmartUI.showStatusOverlay('No content to process', 'warning');
+      setTimeout(() => warningOverlay.remove(), 3000);
+      return;
+    }
+
+    // Set up response manager
+    const responseManager = new ChunkResponseManager(chunks.length, (highlights) => {
+      // Convert LLM highlights array to object format for highlighting
+      const llmHighlights = {};
+      highlights.forEach(highlight => {
+        llmHighlights[highlight.id] = highlight.phrases;
+      });
+
+      // Apply highlights with sequential animation
+      applyHighlightsSequentially(llmHighlights);
     });
 
-    const result = await response.json();
-    console.timeEnd('Network Request');
+    console.log('Sending chunks to backend in parallel...');
+    console.time('Parallel Network Requests');
 
-    if (response.ok) {
-      if (result.highlights) {
-        // Convert LLM highlights array to object format for highlighting
-        const llmHighlights = {};
-        result.highlights.forEach(highlight => {
-          llmHighlights[highlight.id] = highlight.phrases;
+    // Send all chunks in parallel
+    const chunkPromises = chunks.map(async (chunk) => {
+      try {
+        const response = await fetch('http://localhost:3000/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chunkIndex: chunk.chunkIndex,
+            totalChunks: chunk.totalChunks,
+            paragraphs: chunk.paragraphs
+          })
         });
 
-        // Apply LLM highlights with sequential animation
-        const highlightCount = applyHighlightsSequentially(llmHighlights);
+        const result = await response.json();
 
-        // Calculate total animation time
-        const totalAnimationTime = highlightCount * 200 + 300; // 200ms per highlight + 300ms buffer
-
-        // Complete processing after animations
-        setTimeout(() => {
-          console.timeEnd('Total Processing');
-        }, totalAnimationTime);
-
-        console.log('LLM highlights applied:', result.highlights);
-      } else {
-        const warningOverlay = SmartUI.showStatusOverlay(`Sent ${result.paragraphCount} paragraphs (no highlights)`, 'warning');
-        setTimeout(() => warningOverlay.remove(), 3000);
-        console.log('Backend response (no highlights):', result);
+        if (response.ok && result.highlights) {
+          console.log(`Chunk ${chunk.chunkIndex} processed: ${result.highlights.length} highlights`);
+          responseManager.addResponse(chunk.chunkIndex, result.highlights);
+        } else {
+          console.warn(`Chunk ${chunk.chunkIndex} failed or no highlights:`, result);
+          responseManager.addResponse(chunk.chunkIndex, []);
+        }
+      } catch (error) {
+        console.error(`Error processing chunk ${chunk.chunkIndex}:`, error);
+        responseManager.addResponse(chunk.chunkIndex, []);
       }
-    } else {
-      const errorOverlay = SmartUI.showStatusOverlay(`Error: ${result.error}`, 'error');
-      setTimeout(() => errorOverlay.remove(), 3000);
-      console.error('Backend error:', result);
+    });
+
+    // Wait for all chunks to complete
+    await Promise.all(chunkPromises);
+    console.timeEnd('Parallel Network Requests');
+
+    // Check completion
+    if (responseManager.isComplete()) {
+      console.log('All chunks processed successfully');
+      setTimeout(() => {
+        console.timeEnd('Total Processing');
+      }, 1000); // Small delay for final animations
     }
+
   } catch (error) {
-    console.error('Failed to send data to backend:', error);
-    const errorOverlay = SmartUI.showStatusOverlay('Backend connection failed', 'error');
+    console.error('Failed to process chunks:', error);
+    const errorOverlay = SmartUI.showStatusOverlay('Processing failed', 'error');
     setTimeout(() => errorOverlay.remove(), 3000);
   } finally {
     SmartUI.setButtonIcon('elephant', false);
