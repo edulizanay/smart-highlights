@@ -56,6 +56,16 @@ app.post('/extract', async (req, res) => {
       fs.writeFileSync(llmResponsePath, JSON.stringify(llmResult.rawResponse, null, 2));
       console.log('LLM response saved to:', llmResponsePath);
 
+      // Create and save readable log
+      const { createReadableLog } = require('./processors/llm-processor');
+      const llmContent = llmResult.rawResponse.choices[0].message.content;
+      const readableLogContent = createReadableLog(llmContent);
+
+      
+      const readableLogPath = path.join(__dirname, 'logs', 'llm-readable-log.txt');
+      fs.writeFileSync(readableLogPath, readableLogContent);
+      console.log('Readable log saved to:', readableLogPath);
+
       // Return success response with LLM highlights
       res.json({
         success: true,

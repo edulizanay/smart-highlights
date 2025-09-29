@@ -83,7 +83,39 @@ ${JSON.stringify(paragraphs, null, 2)}`
   };
 }
 
+/**
+ * Create a human-readable log from LLM response
+ */
+function createReadableLog(llmContent) {
+  // Convert \n to actual line breaks in the raw content
+  let formattedContent = llmContent.replace(/\\n/g, '\n');
+  
+  // Extract and pretty-print the JSON in the response tags
+  const responseMatch = formattedContent.match(/<response>(.*?)<\/response>/s);
+  if (responseMatch) {
+    try {
+      // Parse the JSON inside response tags
+      const jsonContent = responseMatch[1].trim();
+      const parsedJson = JSON.parse(jsonContent);
+      
+      // Pretty-print the JSON
+      const prettyJson = JSON.stringify(parsedJson, null, 2);
+      
+      // Replace the compressed JSON with pretty-printed version
+      formattedContent = formattedContent.replace(
+        /<response>.*?<\/response>/s,
+        `<response>\n${prettyJson}\n</response>`
+      );
+    } catch (error) {
+      console.log('Could not parse JSON in response, keeping original format');
+    }
+  }
+  
+  return formattedContent;
+}
+
 module.exports = {
   processWithLLM,
-  extractResponseContent
+  extractResponseContent,
+  createReadableLog
 };

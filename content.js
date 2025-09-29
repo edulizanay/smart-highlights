@@ -103,6 +103,8 @@ function injectHighlightCSS() {
     color: white;
     display: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s ease;
   }
   .smart-highlights-button:hover:not(:disabled) {
@@ -114,9 +116,26 @@ function injectHighlightCSS() {
     cursor: not-allowed;
     transform: none;
   }
+  .smart-highlights-button:disabled.loading {
+    animation: pulse-loading 1.5s ease-in-out infinite alternate;
+  }
+  .smart-highlights-button.loading svg {
+    animation: spin-smooth 1s linear infinite;
+  }
   .smart-highlights-button {
     font-size: 16px;
     font-weight: bold;
+  }
+  @keyframes spin-smooth {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes pulse-loading {
+    from { 
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(0, 123, 255, 0.6); 
+    }
+    to { 
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 8px rgba(0, 123, 255, 0); 
+    }
   }
   .color-picker-popup {
     position: fixed;
@@ -210,8 +229,46 @@ colorPalette.forEach(({ name, color, textColor }) => {
 
 document.body.appendChild(colorPicker);
 
-// Hover timer for color picker
-let hoverTimer = null;
+// Palette timing configuration
+const PALETTE_SHOW_DELAY = 800;  // ms to wait before showing palette
+const PALETTE_HIDE_DELAY = 500;  // ms to wait before hiding palette after leaving it
+
+// Palette timer management
+let showTimer = null;  // Timer for showing palette
+let hideTimer = null;  // Timer for hiding palette
+
+// Function to clear all palette timers
+function clearPaletteTimers() {
+  if (showTimer) {
+    clearTimeout(showTimer);
+    showTimer = null;
+  }
+  if (hideTimer) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+  }
+}
+
+// Function to show palette
+function showPalette() {
+  clearPaletteTimers(); // Clear any existing timers
+  colorPicker.classList.add('show');
+
+  // Update selected state
+  colorPicker.querySelectorAll('.color-swatch').forEach(swatch => {
+    if (swatch.dataset.color === currentHighlightColor) {
+      swatch.classList.add('selected');
+    } else {
+      swatch.classList.remove('selected');
+    }
+  });
+}
+
+// Function to hide palette
+function hidePalette() {
+  clearPaletteTimers(); // Clear any existing timers
+  colorPicker.classList.remove('show');
+}
 
 // Function to update highlight color
 function updateHighlightColor(color) {
@@ -240,17 +297,27 @@ chrome.storage.local.get(['highlightColor'], (result) => {
   injectHighlightCSS();
 });
 
-// Set button text icon
-function setButtonIcon(iconName) {
-  const icons = {
-    'highlighter': 'H',
-    'loader-2': '⟳'
-  };
-  floatingButton.textContent = icons[iconName] || 'H';
+// Lucide SVG Icons (embedded for reliability dans content scripts)
+const LUCIDE_ICONS = {
+  'elephant': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-elephant-icon lucide-elephant"><path d="M14.5 12H14c-2.8 0-5-2.2-5-5V5a2 2 0 0 1 2-2h2c1.5 0 2.8.8 3.4 2H19c1.7 0 3 1.3 3 3v10"/><path d="M18 10h.01"/><path d="M14 10a4 4 0 0 0 4 4 4 4 0 0 1 4 4 2 2 0 0 1-4 0"/><path d="M10 16v5"/><path d="M18 14a4 4 0 0 0-4 4v3H6v-2.6c0-1.1-.8-2.3-1.7-3C2.9 14.3 2 12.8 2 11c0-3.3 3.1-6 7-6"/><path d="M2 11v7"/></svg>`,
+  'loader': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="6"/><line x1="12" x2="12" y1="18" y2="22"/><line x1="4.93" x2="7.76" y1="4.93" y2="7.76"/><line x1="16.24" x2="19.07" y1="16.24" y2="19.07"/><line x1="2" x2="6" y1="12" y2="12"/><line x1="18" x2="22" y1="12" y2="12"/><line x1="4.93" x2="7.76" y1="19.07" y2="16.24"/><line x1="16.24" x2="19.07" y1="7.76" y2="4.93"/></svg>`
+};
+
+// Set button SVG icon and loading state
+function setButtonIcon(iconName, isLoading = false) {
+  const iconSVG = LUCIDE_ICONS['elephant'];
+  floatingButton.innerHTML = iconSVG;
+  
+  // Toggle loading class for animations
+  if (isLoading) {
+    floatingButton.classList.add('loading');
+  } else {
+    floatingButton.classList.remove('loading');
+  }
 }
 
 // Initialize button immediately
-setButtonIcon('highlighter');
+setButtonIcon('elephant');
 
 setTimeout(() => {
   // Pass 1: Tag elements
@@ -261,7 +328,7 @@ setTimeout(() => {
 
   // Show button only if >4 paragraphs
   if (targetElements.length > 4) {
-    floatingButton.style.display = 'block';
+    floatingButton.style.display = 'flex';
   }
 
   // Basic extraction confirmation
@@ -299,41 +366,47 @@ setTimeout(() => {
 
   // Button hover handlers for color picker
   floatingButton.addEventListener('mouseenter', () => {
-    // Start 2-second timer
-    hoverTimer = setTimeout(() => {
-      colorPicker.classList.add('show');
-
-      // Update selected state
-      colorPicker.querySelectorAll('.color-swatch').forEach(swatch => {
-        if (swatch.dataset.color === currentHighlightColor) {
-          swatch.classList.add('selected');
-        } else {
-          swatch.classList.remove('selected');
-        }
-      });
-    }, 500);
+    // Clear any existing timers
+    clearPaletteTimers();
+    
+    // Start timer to show palette after delay
+    showTimer = setTimeout(() => {
+      showPalette();
+    }, PALETTE_SHOW_DELAY);
   });
 
   floatingButton.addEventListener('mouseleave', () => {
-    // Cancel timer if mouse leaves
-    if (hoverTimer) {
-      clearTimeout(hoverTimer);
-      hoverTimer = null;
+    // Cancel show timer if mouse leaves button
+    if (showTimer) {
+      clearTimeout(showTimer);
+      showTimer = null;
+    }
+    
+    // If palette is visible, start hiding timer
+    if (colorPicker.classList.contains('show')) {
+      hideTimer = setTimeout(() => {
+        hidePalette();
+      }, PALETTE_HIDE_DELAY);
     }
   });
 
   // Color picker hover handlers
   colorPicker.addEventListener('mouseenter', () => {
-    // Keep picker open when hovering over it
-    if (hoverTimer) {
-      clearTimeout(hoverTimer);
-      hoverTimer = null;
+    // Cancel hide timer when entering palette
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
     }
+    
+    // Show palette immediately if hovering over it
+    showPalette();
   });
 
   colorPicker.addEventListener('mouseleave', () => {
-    // Close picker when mouse leaves
-    colorPicker.classList.remove('show');
+    // Start timer to hide palette when leaving it
+    hideTimer = setTimeout(() => {
+      hidePalette();
+    }, PALETTE_HIDE_DELAY);
   });
 
   // Color swatch click handler
@@ -350,9 +423,9 @@ setTimeout(() => {
       });
       e.target.classList.add('selected');
 
-      // Close picker after selection
+      // Close picker after selection (using our hide function)
       setTimeout(() => {
-        colorPicker.classList.remove('show');
+        hidePalette();
       }, 300);
     }
   });
@@ -362,16 +435,19 @@ setTimeout(() => {
     // Prevent double clicks
     if (floatingButton.disabled) return;
 
+    // Immediately hide palette and clear all timers when starting processing
+    clearPaletteTimers();
+    hidePalette();
+
     // Start timing
     console.time('Total Processing');
 
-    // Set loading state
+    // Set loading state with elegant spinner
     floatingButton.disabled = true;
-    setButtonIcon('loader-2');
+    setButtonIcon('loader', true);
     floatingButton.title = 'Processing...';
 
-    // Show processing overlay
-    const processingOverlay = showStatusOverlay('Processing...', 'info');
+    // Remove the processing overlay popup - no longer needed!
 
     // Use the already-tagged elements from page load
     const taggedElements = document.querySelectorAll('[data-highlight-id]');
@@ -402,9 +478,6 @@ setTimeout(() => {
       if (response.ok) {
         // Check if we got LLM highlights
         if (result.highlights) {
-          // Update status
-          processingOverlay.textContent = 'Applying highlights...';
-
           // Convert LLM highlights array to object format for highlighting
           const llmHighlights = {};
           result.highlights.forEach(highlight => {
@@ -417,23 +490,19 @@ setTimeout(() => {
           // Calculate total animation time
           const totalAnimationTime = highlightCount * 200 + 300; // 200ms per highlight + 300ms buffer
 
-          // Show final success message after animations complete
+          // Complete processing after animations
           setTimeout(() => {
             console.timeEnd('Total Processing');
-            processingOverlay.remove();
-            const successOverlay = showStatusOverlay(`Applied ${result.highlights.length} highlights`, 'success');
-            setTimeout(() => successOverlay.remove(), 2000);
+            
           }, totalAnimationTime);
 
           console.log('LLM highlights applied:', result.highlights);
         } else {
-          processingOverlay.remove();
           const warningOverlay = showStatusOverlay(`Sent ${result.paragraphCount} paragraphs (no highlights)`, 'warning');
           setTimeout(() => warningOverlay.remove(), 3000);
           console.log('Backend response (no highlights):', result);
         }
       } else {
-        processingOverlay.remove();
         const errorOverlay = showStatusOverlay(`Error: ${result.error}`, 'error');
         setTimeout(() => errorOverlay.remove(), 3000);
         console.error('Backend error:', result);
@@ -441,13 +510,12 @@ setTimeout(() => {
 
     } catch (error) {
       console.error('Failed to send data to backend:', error);
-      processingOverlay.remove();
       const errorOverlay = showStatusOverlay('Backend connection failed', 'error');
       setTimeout(() => errorOverlay.remove(), 3000);
     } finally {
       // Reset button state
       floatingButton.disabled = false;
-      setButtonIcon('highlighter');
+      setButtonIcon('elephant', false);
       floatingButton.title = '';
     }
   });
