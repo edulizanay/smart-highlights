@@ -141,11 +141,11 @@ function injectHighlightCSS() {
     position: fixed;
     top: 70px;
     right: 15px;
-    background: white;
-    border: 1px solid #ddd;
+    background: transparent;
+    border: none;
     border-radius: 8px;
     padding: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
     z-index: 10002;
     display: none;
     opacity: 0;
@@ -162,16 +162,34 @@ function injectHighlightCSS() {
     height: 30px;
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid transparent;
-    transition: transform 0.2s, border-color 0.2s;
+    border: 2px solid #888;
+    transition: transform 0.2s, border-color 0.2s, border-width 0.2s;
+    position: relative;
+    background-color:rgba(250, 250, 250, 0.71);
+  }
+  .color-swatch::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: calc(100% - 6px);
+    height: calc(100% - 6px);
+    border-radius: 50%;
+    background-color: var(--swatch-color-opaque);
+    z-index: 1;
   }
   .color-swatch:hover {
     transform: scale(1.1);
-    border-color: #333;
+    border-color: #888;
+  }
+  .color-swatch:hover {
+    transform: scale(1.1);
+    border-color: #888;
   }
   .color-swatch.selected {
-    border-color: #0066ff;
-    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+    border-color: #4A90E2;
+    border-width: 4px;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
   }
   .smart-highlights-overlay {
     position: fixed;
@@ -217,13 +235,16 @@ function getTextColor(backgroundColor) {
   return colorConfig ? colorConfig.textColor : 'black';
 }
 
-// Create color swatches
 colorPalette.forEach(({ name, color, textColor }) => {
   const swatch = document.createElement('div');
   swatch.className = 'color-swatch';
-  swatch.style.backgroundColor = color;
+  
+  // Set CSS custom property for the inner color (always opaque for palette)
+  const opaqueColor = color.replace(/,\s*[\d.]+\)$/, ', 1)');
+  swatch.style.setProperty('--swatch-color-opaque', opaqueColor);
+  
   swatch.title = name;
-  swatch.dataset.color = color;
+  swatch.dataset.color = color; // Keep original transparent color for highlighting
   colorPicker.appendChild(swatch);
 });
 
@@ -305,7 +326,7 @@ const LUCIDE_ICONS = {
 
 // Set button SVG icon and loading state
 function setButtonIcon(iconName, isLoading = false) {
-  const iconSVG = LUCIDE_ICONS['elephant'];
+  const iconSVG = LUCIDE_ICONS[iconName] || LUCIDE_ICONS['elephant'];
   floatingButton.innerHTML = iconSVG;
   
   // Toggle loading class for animations
