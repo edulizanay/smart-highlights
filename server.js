@@ -20,8 +20,45 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json());
 
+// Input validation middleware
+function validateParagraphData(req, res, next) {
+  const { paragraphs, chunkIndex, totalChunks } = req.body;
+  const actualParagraphs = paragraphs || req.body;
+
+  // Check for empty or invalid payload
+  if (!actualParagraphs || typeof actualParagraphs !== 'object') {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid payload',
+      message: 'Request must contain paragraph data as an object'
+    });
+  }
+
+  const paraCount = Object.keys(actualParagraphs).length;
+
+  // Check for empty paragraphs
+  if (paraCount === 0) {
+    return res.status(400).json({
+      success: false,
+      error: 'Empty payload',
+      message: 'No paragraphs provided'
+    });
+  }
+
+  // Check for reasonable size to prevent abuse
+  if (paraCount > 1000) {
+    return res.status(400).json({
+      success: false,
+      error: 'Payload too large',
+      message: `Maximum 1000 paragraphs allowed, received ${paraCount}`
+    });
+  }
+
+  next();
+}
+
 // POST /extract - receive paragraph data from extension
-app.post('/extract', async (req, res) => {
+app.post('/extract', validateParagraphData, async (req, res) => {
   try {
     const { chunkIndex, totalChunks, paragraphs } = req.body;
 
