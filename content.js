@@ -1,119 +1,98 @@
 // ABOUTME: Content script for Smart Highlights—injects UI and applies highlights.
-// TIMING: Even at document_end, defer DOM mutations (~500ms) so site JS doesn’t revert them.
+// TIMING: Even at document_end, defer DOM mutations (~500ms) so site JS doesn't revert them.
 // RELIABILITY: Use a two-pass flow—tag elements first, then query fresh and apply changes.
 
-function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-highlight', delay = 400) {
-  const taggedElements = document.querySelectorAll('[data-highlight-id]');
-  let totalHighlights = 0;
-  const allHighlights = [];
-
-  // First pass: collect all highlights to apply
-  taggedElements.forEach(element => {
-    const paragraphId = element.getAttribute('data-highlight-id');
-    const phrasesToHighlight = highlightsData[paragraphId];
-
-    if (!phrasesToHighlight || phrasesToHighlight.length === 0) {
-      return;
-    }
-
-    phrasesToHighlight.forEach(phrase => {
-      allHighlights.push({ element, phrase });
-    });
-  });
-
-  // Second pass: apply highlights sequentially
-  allHighlights.forEach((highlight, index) => {
-    setTimeout(() => {
-      const { element, phrase } = highlight;
-      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedPhrase})`, 'gi');
-      const textColor = SmartUI.getTextColor(currentHighlightColor);
-      const newHtml = element.innerHTML.replace(
-        regex,
-        `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
-      );
-
-      if (newHtml !== element.innerHTML) {
-        element.innerHTML = newHtml;
-
-        // Fade in new highlights reliably using next-frame promotion (covers multiple matches)
-        const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
-        if (newHighlights.length > 0) {
-          // Next frame: attach transition
-          requestAnimationFrame(() => {
-            newHighlights.forEach(h => {
-              h.style.transition = 'opacity 0.18s ease-out';
-            });
-            // Following frame: toggle to visible so transition runs
-            requestAnimationFrame(() => {
-              newHighlights.forEach(h => {
-                h.style.opacity = '1';
-              });
-            });
-          });
-        }
-      }
-    }, index * delay);
-
-  });
-
-  return allHighlights.length;
+// Helper: Escape special regex characters
+function escapeForRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Legacy function for instant highlights (kept for compatibility)
-function applyHighlights(highlightsData, highlightClass = 'smart-highlight') {
-  return applyHighlightsSequentially(highlightsData, highlightClass, 0);
+// Helper: Fade in highlights with requestAnimationFrame
+function fadeInHighlights(elements) {
+  if (elements.length === 0) return;
+
+  requestAnimationFrame(() => {
+    elements.forEach(el => {
+      el.style.transition = 'opacity 0.18s ease-out';
+    });
+    requestAnimationFrame(() => {
+      elements.forEach(el => {
+        el.style.opacity = '1';
+      });
+    });
+  });
 }
 
-// Apply highlights instantly without sequential delay for chunk processing
-function applyHighlightsInstantly(highlightsData, highlightClass = 'smart-highlight') {
+// Unified highlight application function
+function applyHighlights(highlightsData, options = {}) {
+  const {
+    sequential = false,
+    delay = 0,
+    highlightClass = 'smart-highlight'
+  } = options;
+
   const taggedElements = document.querySelectorAll('[data-highlight-id]');
+  const textColor = SmartUI.getTextColor(currentHighlightColor);
   let totalHighlights = 0;
 
-  taggedElements.forEach(element => {
-    const paragraphId = element.getAttribute('data-highlight-id');
-    const phrasesToHighlight = highlightsData[paragraphId];
-
-    if (!phrasesToHighlight || phrasesToHighlight.length === 0) {
-      return;
-    }
-
-    // Apply all phrases for this paragraph in one pass
-    let modifiedHtml = element.innerHTML;
-    const textColor = SmartUI.getTextColor(currentHighlightColor);
-
-    phrasesToHighlight.forEach(phrase => {
-      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedPhrase})`, 'gi');
-      modifiedHtml = modifiedHtml.replace(
-        regex,
-        `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
-      );
-      totalHighlights++;
-    });
-
-    // Apply the modified HTML once
-    if (modifiedHtml !== element.innerHTML) {
-      element.innerHTML = modifiedHtml;
-
-      // Fade in new highlights using requestAnimationFrame
-      const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
-      if (newHighlights.length > 0) {
-        requestAnimationFrame(() => {
-          newHighlights.forEach(h => {
-            h.style.transition = 'opacity 0.18s ease-out';
-          });
-          requestAnimationFrame(() => {
-            newHighlights.forEach(h => {
-              h.style.opacity = '1';
-            });
-          });
+  if (sequential) {
+    // Sequential mode: apply one phrase at a time with delay
+    const allHighlights = [];
+    taggedElements.forEach(element => {
+      const paragraphId = element.getAttribute('data-highlight-id');
+      const phrases = highlightsData[paragraphId];
+      if (phrases?.length > 0) {
+        phrases.forEach(phrase => {
+          allHighlights.push({ element, phrase });
         });
       }
-    }
-  });
+    });
 
-  return totalHighlights;
+    allHighlights.forEach((highlight, index) => {
+      setTimeout(() => {
+        const { element, phrase } = highlight;
+        const regex = new RegExp(`(${escapeForRegex(phrase)})`, 'gi');
+        const newHtml = element.innerHTML.replace(
+          regex,
+          `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
+        );
+
+        if (newHtml !== element.innerHTML) {
+          element.innerHTML = newHtml;
+          const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
+          fadeInHighlights(Array.from(newHighlights));
+        }
+      }, index * delay);
+    });
+
+    return allHighlights.length;
+  } else {
+    // Instant mode: batch all phrases per paragraph
+    taggedElements.forEach(element => {
+      const paragraphId = element.getAttribute('data-highlight-id');
+      const phrases = highlightsData[paragraphId];
+
+      if (!phrases || phrases.length === 0) return;
+
+      let modifiedHtml = element.innerHTML;
+      phrases.forEach(phrase => {
+        const regex = new RegExp(`(${escapeForRegex(phrase)})`, 'gi');
+        modifiedHtml = modifiedHtml.replace(
+          regex,
+          `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
+        );
+        totalHighlights++;
+      });
+
+      if (modifiedHtml !== element.innerHTML) {
+        element.innerHTML = modifiedHtml;
+        const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
+        fadeInHighlights(Array.from(newHighlights));
+      }
+    });
+
+    return totalHighlights;
+  }
 }
 
 // Persistent color state
@@ -344,7 +323,7 @@ async function handleButtonClick() {
       });
 
       // Apply highlights instantly for chunk processing
-      applyHighlightsInstantly(llmHighlights);
+      applyHighlights(llmHighlights);
     });
 
     console.log(`Sending ${chunks.length} chunks with 2 concurrent requests...`);
