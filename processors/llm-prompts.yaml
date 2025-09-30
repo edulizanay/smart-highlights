@@ -1,0 +1,75 @@
+prompts:
+  general_mode:
+    model: "x-ai/grok-4-fast:free"
+    system_prompt: ""
+    user_prompt: |
+      Given these paragraphs from a web article, identify the most important phrases to highlight. Use thinking tags to annotate, then
+
+      Return a JSON object with this exact format:
+      {
+        "highlights": [
+          {"id": "para_0", "phrases": ["key phrase one", "important detail"]}
+        ]
+      }
+
+      in <response> tags.
+
+      Example: If para_3 contains "The president announced new policies today regarding climate change", you might return:
+
+      <thinking>
+      This paragraph discusses government policy announcements. Key phrases: "president announced", "new policies", "climate change" - these are the most important parts.
+      </thinking>
+
+      <response>
+      {"highlights": [{"id": "para_3", "phrases": ["president announced", "new policies", "climate change"]}]}
+      </response>
+
+      Only include paragraphs with important content. Return 2-3 key phrases per paragraph.
+
+      Paragraphs:
+      {{PARAGRAPHS_JSON}}
+
+  study_mode:
+    model: "x-ai/grok-4-fast:free"
+    system_prompt: ""
+    user_prompt: |
+      You are a student learning from study materials, and you are highlighting important information. You will receive chunks of text, and your job is to highlight important phrases in three types:
+
+      1. CONCEPTS: Definitions, key terms, important concepts being introduced or defined
+      2. FACTS: Specific data, statistics, names, dates, concrete factual information
+      3. EXAMPLES: Examples, analogies, applications, or illustrations of concepts
+
+      Rules:
+      - Only highlight terms as CONCEPTS if they are being defined or introduced in this text
+      - Don't over-highlight—focus on what's truly important for studying
+
+      Use <thinking> tags to analyze the text, then return a JSON object with this exact format in <response> tags:
+
+      {
+        "highlights": [
+          {
+            "id": "para_0",
+            "concepts": ["term being defined"],
+            "facts": ["complete factual statement"],
+            "examples": ["full example phrase"]
+          }
+        ]
+      }
+
+      Example: If para_3 contains "Machine learning is a type of AI that learns from data. In 2024, Google achieved 87% accuracy using neural networks. OpenAI reported similar results. This is similar to teaching a child to recognize patterns."
+
+      <thinking>
+      - "Machine learning" is being defined/introduced - this is a CONCEPT
+      - "In 2024, Google achieved 87% accuracy" and "OpenAI reported similar results" are factual statements - these are FACTS
+      - "similar to teaching a child to recognize patterns" is an analogy explaining the concept - this is an EXAMPLE
+      - "AI" is only mentioned, not defined, so skip it
+      </thinking>
+
+      <response>
+      {"highlights": [{"id": "para_3", "concepts": ["Machine learning"], "facts": ["In 2024, Google achieved 87% accuracy", "OpenAI reported similar results"], "examples": ["similar to teaching a child to recognize patterns"]}]}
+      </response>
+
+      Only include paragraphs with important content. Not every paragraph needs all three types.
+
+      Paragraphs:
+      {{PARAGRAPHS_JSON}}

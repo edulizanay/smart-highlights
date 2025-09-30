@@ -60,15 +60,17 @@ function validateParagraphData(req, res, next) {
 // POST /extract - receive paragraph data from extension
 app.post('/extract', validateParagraphData, async (req, res) => {
   try {
-    const { chunkIndex, totalChunks, paragraphs } = req.body;
+    const { chunkIndex, totalChunks, paragraphs, mode } = req.body;
 
     // Handle both old format (direct paragraphs) and new format (chunks)
     const actualParagraphs = paragraphs || req.body;
     const isChunkedRequest = chunkIndex !== undefined;
+    const highlightMode = mode || 'study'; // Default to study mode if not provided
 
     // Log received data for debugging
     console.log('=== RECEIVED PARAGRAPH DATA ===');
     console.log(`Paragraphs received: ${Object.keys(actualParagraphs).length}`);
+    console.log(`Mode: ${highlightMode}`);
     if (isChunkedRequest) {
       console.log(`Chunk: ${chunkIndex + 1}/${totalChunks}`);
     }
@@ -77,7 +79,7 @@ app.post('/extract', validateParagraphData, async (req, res) => {
     const timerLabel = isChunkedRequest ? `LLM Processing Chunk ${chunkIndex}` : 'LLM Processing';
     console.time(timerLabel);
     try {
-      const llmResult = await processWithLLM(actualParagraphs);
+      const llmResult = await processWithLLM(actualParagraphs, highlightMode);
       console.timeEnd(timerLabel);
 
       // Return success response with LLM highlights and chunk metadata

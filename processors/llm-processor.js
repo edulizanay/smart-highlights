@@ -2,6 +2,7 @@
 // ABOUTME: Centralizes all LLM-related logic for highlight extraction
 
 const axios = require('axios');
+const { getPrompt, fillTemplate, getModel } = require('./prompt-loader');
 require('dotenv').config();
 
 /**
@@ -24,42 +25,26 @@ function extractResponseContent(llmContent) {
 
 /**
  * Process paragraphs through OpenRouter LLM for highlight extraction
+ * @param {object} paragraphs - The paragraphs to process
+ * @param {string} mode - The highlighting mode ('study' or 'general')
  */
-async function processWithLLM(paragraphs) {
-  console.log('Sending to OpenRouter for analysis...');
+async function processWithLLM(paragraphs, mode = 'study') {
+  console.log(`Sending to OpenRouter for analysis (${mode} mode)...`);
+
+  // Load prompt from YAML configuration based on mode
+  const promptMode = mode + '_mode'; // 'study' -> 'study_mode', 'general' -> 'general_mode'
+  const promptTemplate = getPrompt(promptMode);
+  const model = getModel(promptMode);
+  const filledPrompt = fillTemplate(promptTemplate, paragraphs);
 
   const openRouterResponse = await axios.post(
     'https://openrouter.ai/api/v1/chat/completions',
     {
-      model: 'x-ai/grok-4-fast:free',
+      model: model,
       messages: [
         {
           role: 'user',
-          content: `Given these paragraphs from a web article, identify the most important phrases to highlight. Use thinking tags to annotate, then
-
-Return a JSON object with this exact format:
-{
-  "highlights": [
-    {"id": "para_0", "phrases": ["key phrase one", "important detail"]}
-  ]
-}
-
-in <response> tags.
-
-Example: If para_3 contains "The president announced new policies today regarding climate change", you might return:
-
-<thinking>
-This paragraph discusses government policy announcements. Key phrases: "president announced", "new policies", "climate change" - these are the most important parts.
-</thinking>
-
-<response>
-{"highlights": [{"id": "para_3", "phrases": ["president announced", "new policies", "climate change"]}]}
-</response>
-
-Only include paragraphs with important content. Return 2-3 key phrases per paragraph.
-
-Paragraphs:
-${JSON.stringify(paragraphs, null, 2)}`
+          content: filledPrompt
         }
       ]
     },
