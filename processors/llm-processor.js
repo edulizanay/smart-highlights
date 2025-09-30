@@ -31,7 +31,7 @@ async function processWithLLM(paragraphs) {
   const openRouterResponse = await axios.post(
     'https://openrouter.ai/api/v1/chat/completions',
     {
-      model: 'x-ai/grok-4-fast',
+      model: 'x-ai/grok-4-fast:free',
       messages: [
         {
           role: 'user',
