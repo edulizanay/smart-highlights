@@ -27,6 +27,27 @@
       border-radius: 3px !important;
       font-weight: bold !important;
     }
+    .smart-highlight-concept {
+      background-color: rgba(255, 255, 0, 0.5) !important;
+      color: black !important;
+      padding: 2px 4px !important;
+      border-radius: 3px !important;
+      font-weight: bold !important;
+    }
+    .smart-highlight-fact {
+      background-color: rgba(150, 0, 255, 0.3) !important;
+      color: white !important;
+      padding: 2px 4px !important;
+      border-radius: 3px !important;
+      font-weight: bold !important;
+    }
+    .smart-highlight-example {
+      background-color: rgba(255, 165, 0, 0.5) !important;
+      color: black !important;
+      padding: 2px 4px !important;
+      border-radius: 3px !important;
+      font-weight: bold !important;
+    }
     .smart-highlights-button {
       position: fixed;
       top: calc(20px + 8vh);
@@ -122,12 +143,55 @@
       z-index: 10001;
       font-size: 14px;
       transition: opacity 0.3s ease;
+    }
+    .mode-selector-popup {
+      position: fixed;
+      top: calc(20px + 8vh + 40px);
+      right: 15px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: none;
+      z-index: 10002;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mode-selector-popup.show { display: flex; opacity: 1; }
+    .mode-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #888;
+      transition: transform 0.2s, border-color 0.2s, border-width 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(250,250,250,0.71);
+    }
+    .mode-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    .mode-icon:hover {
+      transform: scale(1.1);
+      border-color: #888;
+    }
+    .mode-icon.selected {
+      border-color: #4A90E2;
+      border-width: 4px;
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
     }`;
       if (!style.parentNode) document.head.appendChild(style);
     }
   
     const LUCIDE_ICONS = {
       elephant: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-elephant-icon lucide-elephant"><path d="M14.5 12H14c-2.8 0-5-2.2-5-5V5a2 2 0 0 1 2-2h2c1.5 0 2.8.8 3.4 2H19c1.7 0 3 1.3 3 3v10"/><path d="M18 10h.01"/><path d="M14 10a4 4 0 0 0 4 4 4 4 0 0 1 4 4 2 2 0 0 1-4 0"/><path d="M10 16v5"/><path d="M18 14a4 4 0 0 0-4 4v3H6v-2.6c0-1.1-.8-2.3-1.7-3C2.9 14.3 2 12.8 2 11c0-3.3 3.1-6 7-6"/><path d="M2 11v7"/></svg>`,
+      turtle:   `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-turtle-icon lucide-turtle"><path d="m12 10 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a8 8 0 1 0-16 0v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3l2-4h4Z"/><path d="M4.82 7.9 8 10"/><path d="M15.18 7.9 12 10"/><path d="M16.93 10H20a2 2 0 0 1 0 4H2"/></svg>`,
       loader:   `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="6"/><line x1="12" x2="12" y1="18" y2="22"/><line x1="4.93" x2="7.76" y1="4.93" y2="7.76"/><line x1="16.24" x2="19.07" y1="16.24" y2="19.07"/><line x1="2" x2="6" y1="12" y2="12"/><line x1="18" x2="22" y1="12" y2="12"/><line x1="4.93" x2="7.76" y1="19.07" y2="16.24"/><line x1="16.24" x2="19.07" y1="7.76" y2="4.93"/></svg>`
     };
   
@@ -141,7 +205,56 @@
     floatingButton.title = '';
     const colorPicker = document.createElement('div');
     colorPicker.className = 'color-picker-popup';
-  
+
+    // Mode selector popup
+    const modeSelector = document.createElement('div');
+    modeSelector.className = 'mode-selector-popup';
+
+    // Create mode icons
+    const elephantModeIcon = document.createElement('div');
+    elephantModeIcon.className = 'mode-icon';
+    elephantModeIcon.dataset.mode = 'study';
+    elephantModeIcon.innerHTML = LUCIDE_ICONS.elephant;
+    elephantModeIcon.title = 'Study Mode';
+
+    const turtleModeIcon = document.createElement('div');
+    turtleModeIcon.className = 'mode-icon';
+    turtleModeIcon.dataset.mode = 'general';
+    turtleModeIcon.innerHTML = LUCIDE_ICONS.turtle;
+    turtleModeIcon.title = 'General Mode';
+
+    modeSelector.appendChild(elephantModeIcon);
+    modeSelector.appendChild(turtleModeIcon);
+
+    // Mode state management
+    let currentMode = 'study';
+
+    function updateModeSelectorPopup() {
+      // Show only unselected modes in the popup
+      elephantModeIcon.style.display = currentMode === 'study' ? 'none' : 'flex';
+      turtleModeIcon.style.display = currentMode === 'general' ? 'none' : 'flex';
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+
+      // Save to storage
+      chrome.storage.local.set({ highlightMode: mode });
+
+      // Update button icon
+      const iconName = mode === 'study' ? 'elephant' : 'turtle';
+      setButtonIcon(iconName, false);
+
+      // Update popup to show only unselected modes
+      updateModeSelectorPopup();
+
+      console.log(`Mode switched to: ${mode}`);
+    }
+
+    function getMode() {
+      return currentMode;
+    }
+
     function setButtonIcon(iconName, isLoading = false) {
       const iconSVG = LUCIDE_ICONS[iconName] || LUCIDE_ICONS.elephant;
       floatingButton.innerHTML = iconSVG;
@@ -212,48 +325,75 @@
       document.head.appendChild(style);
       document.body.appendChild(floatingButton);
       document.body.appendChild(colorPicker);
-  
+      document.body.appendChild(modeSelector);
+
       // Initial CSS + icon
       injectHighlightCSS();
-      setButtonIcon('elephant', false);
-  
-      // Hover to show palette
+
+      // Load saved mode from storage
+      chrome.storage.local.get(['highlightMode'], (result) => {
+        const savedMode = result.highlightMode || 'study';
+        setMode(savedMode);
+      });
+
+      // LEGACY: Color palette Disabled for study mode (multi-color categorization)
+      // May re-enable for manual highlight mode in the future
+      // Keeping code structure in place for potential future use
+
+      /* DISABLED - Color palette interactions
+      [old color palette code removed for brevity]
+      */
+
+      // Mode selector hover behavior
+      function showModeSelector() {
+        clearPaletteTimers();
+        modeSelector.classList.add('show');
+      }
+
+      function hideModeSelector() {
+        clearPaletteTimers();
+        modeSelector.classList.remove('show');
+      }
+
+      // Hover to show mode selector
       floatingButton.addEventListener('mouseenter', () => {
         clearPaletteTimers();
-        showTimer = setTimeout(() => showPalette(), PALETTE_SHOW_DELAY_MS);
+        showTimer = setTimeout(() => showModeSelector(), PALETTE_SHOW_DELAY_MS);
       });
+
       floatingButton.addEventListener('mouseleave', () => {
         if (showTimer) { clearTimeout(showTimer); showTimer = null; }
-        if (colorPicker.classList.contains('show')) {
-          hideTimer = setTimeout(() => hidePalette(), PALETTE_HIDE_DELAY_MS);
+        if (modeSelector.classList.contains('show')) {
+          hideTimer = setTimeout(() => hideModeSelector(), PALETTE_HIDE_DELAY_MS);
         }
       });
-  
-      // Palette hover keep-open
-      colorPicker.addEventListener('mouseenter', () => {
+
+      // Mode selector hover keep-open
+      modeSelector.addEventListener('mouseenter', () => {
         if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-        showPalette();
+        showModeSelector();
       });
-      colorPicker.addEventListener('mouseleave', () => {
-        hideTimer = setTimeout(() => hidePalette(), PALETTE_HIDE_DELAY_MS);
+
+      modeSelector.addEventListener('mouseleave', () => {
+        hideTimer = setTimeout(() => hideModeSelector(), PALETTE_HIDE_DELAY_MS);
       });
-  
-      // Swatch click
-      colorPicker.addEventListener('click', (e) => {
+
+      // Mode icon click handler
+      modeSelector.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!e.target.classList.contains('color-swatch')) return;
-        const color = e.target.dataset.color;
-        if (typeof onColorChange === 'function') onColorChange(color);
-        colorPicker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-        e.target.classList.add('selected');
-        setTimeout(() => hidePalette(), 300);
+        const modeIcon = e.target.closest('.mode-icon');
+        if (!modeIcon) return;
+
+        const selectedMode = modeIcon.dataset.mode;
+        setMode(selectedMode);
+        setTimeout(() => hideModeSelector(), 300);
       });
-  
-      // Button click
+
+      // Button click - process highlights
       floatingButton.addEventListener('click', async () => {
         if (floatingButton.disabled) return;
         clearPaletteTimers();
-        hidePalette();
+        hideModeSelector();
         if (typeof onClick === 'function') await onClick();
       });
     }
@@ -265,6 +405,8 @@
       showStatusOverlay,
       setColor,
       getTextColor,
-      setButtonVisible
+      setButtonVisible,
+      getMode,
+      setMode
     };
   })();

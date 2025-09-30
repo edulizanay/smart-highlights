@@ -38,39 +38,63 @@ function fadeInHighlights(elements) {
 function applyHighlights(highlightsData, options = {}) {
   const {
     sequential = false,
-    delay = 0,
-    highlightClass = 'smart-highlight'
+    delay = 0
   } = options;
 
   const taggedElements = document.querySelectorAll('[data-highlight-id]');
-  const textColor = SmartUI.getTextColor(currentHighlightColor);
   let totalHighlights = 0;
+
+  // Helper to apply a single phrase with a specific color class
+  function applyPhrase(element, phrase, colorClass) {
+    const regex = new RegExp(`(${escapeForRegex(phrase)})`, 'gi');
+    return element.innerHTML.replace(
+      regex,
+      `<span class="${colorClass}" style="opacity: 0;">$1</span>`
+    );
+  }
 
   if (sequential) {
     // Sequential mode: apply one phrase at a time with delay
     const allHighlights = [];
     taggedElements.forEach(element => {
       const paragraphId = element.getAttribute('data-highlight-id');
-      const phrases = highlightsData[paragraphId];
-      if (phrases?.length > 0) {
-        phrases.forEach(phrase => {
-          allHighlights.push({ element, phrase });
+      const phraseData = highlightsData[paragraphId];
+
+      if (!phraseData) return;
+
+      // Handle new format: {concepts: [], facts: [], examples: []}
+      if (phraseData.concepts) {
+        phraseData.concepts.forEach(phrase => {
+          allHighlights.push({ element, phrase, colorClass: 'smart-highlight-concept' });
+        });
+      }
+      if (phraseData.facts) {
+        phraseData.facts.forEach(phrase => {
+          allHighlights.push({ element, phrase, colorClass: 'smart-highlight-fact' });
+        });
+      }
+      if (phraseData.examples) {
+        phraseData.examples.forEach(phrase => {
+          allHighlights.push({ element, phrase, colorClass: 'smart-highlight-example' });
+        });
+      }
+
+      // Handle old format: array of phrases
+      if (Array.isArray(phraseData)) {
+        phraseData.forEach(phrase => {
+          allHighlights.push({ element, phrase, colorClass: 'smart-highlight' });
         });
       }
     });
 
     allHighlights.forEach((highlight, index) => {
       setTimeout(() => {
-        const { element, phrase } = highlight;
-        const regex = new RegExp(`(${escapeForRegex(phrase)})`, 'gi');
-        const newHtml = element.innerHTML.replace(
-          regex,
-          `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
-        );
+        const { element, phrase, colorClass } = highlight;
+        const newHtml = applyPhrase(element, phrase, colorClass);
 
         if (newHtml !== element.innerHTML) {
           element.innerHTML = newHtml;
-          const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
+          const newHighlights = element.querySelectorAll(`span[style*="opacity: 0"]`);
           fadeInHighlights(Array.from(newHighlights));
         }
       }, index * delay);
@@ -81,23 +105,48 @@ function applyHighlights(highlightsData, options = {}) {
     // Instant mode: batch all phrases per paragraph
     taggedElements.forEach(element => {
       const paragraphId = element.getAttribute('data-highlight-id');
-      const phrases = highlightsData[paragraphId];
+      const phraseData = highlightsData[paragraphId];
 
-      if (!phrases || phrases.length === 0) return;
+      if (!phraseData) return;
 
       let modifiedHtml = element.innerHTML;
-      phrases.forEach(phrase => {
-        const regex = new RegExp(`(${escapeForRegex(phrase)})`, 'gi');
-        modifiedHtml = modifiedHtml.replace(
-          regex,
-          `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
-        );
-        totalHighlights++;
-      });
+
+      // Handle new format: {concepts: [], facts: [], examples: []}
+      if (phraseData.concepts) {
+        phraseData.concepts.forEach(phrase => {
+          modifiedHtml = applyPhrase({ innerHTML: modifiedHtml }, phrase, 'smart-highlight-concept');
+          totalHighlights++;
+        });
+      }
+      if (phraseData.facts) {
+        phraseData.facts.forEach(phrase => {
+          modifiedHtml = applyPhrase({ innerHTML: modifiedHtml }, phrase, 'smart-highlight-fact');
+          totalHighlights++;
+        });
+      }
+      if (phraseData.examples) {
+        phraseData.examples.forEach(phrase => {
+          modifiedHtml = applyPhrase({ innerHTML: modifiedHtml }, phrase, 'smart-highlight-example');
+          totalHighlights++;
+        });
+      }
+
+      // Handle old format: array of phrases (backward compatibility)
+      if (Array.isArray(phraseData)) {
+        phraseData.forEach(phrase => {
+          const textColor = SmartUI.getTextColor(currentHighlightColor);
+          const regex = new RegExp(`(${escapeForRegex(phrase)})`, 'gi');
+          modifiedHtml = modifiedHtml.replace(
+            regex,
+            `<span class="smart-highlight" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
+          );
+          totalHighlights++;
+        });
+      }
 
       if (modifiedHtml !== element.innerHTML) {
         element.innerHTML = modifiedHtml;
-        const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
+        const newHighlights = element.querySelectorAll(`span[style*="opacity: 0"]`);
         fadeInHighlights(Array.from(newHighlights));
       }
     });
@@ -194,7 +243,7 @@ setTimeout(() => {
 }, CONFIG.DOM_READY_DELAY_MS);
 
 // Process chunks with limited concurrency to maintain order and avoid API flooding
-async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2) {
+async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2, mode = 'study') {
   let index = 0;
 
   // Process a single chunk and return its identity with the result
@@ -206,7 +255,8 @@ async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent =
         body: JSON.stringify({
           chunkIndex: chunk.chunkIndex,
           totalChunks: chunk.totalChunks,
-          paragraphs: chunk.paragraphs
+          paragraphs: chunk.paragraphs,
+          mode: mode
         })
       });
 
@@ -273,6 +323,10 @@ async function handleButtonClick() {
 
   console.time('Total Processing');
 
+  // Get current mode from UI
+  const currentMode = SmartUI.getMode();
+  console.log(`Processing in ${currentMode} mode`);
+
   // Set loading state
   SmartUI.setButtonIcon('loader', true);
 
@@ -311,7 +365,18 @@ async function handleButtonClick() {
         // Convert LLM highlights array to object format for highlighting
         const llmHighlights = {};
         highlights.forEach(highlight => {
-          llmHighlights[highlight.id] = highlight.phrases;
+          // New format: {id, concepts: [], facts: [], examples: []}
+          // Old format: {id, phrases: []}
+          if (highlight.concepts || highlight.facts || highlight.examples) {
+            llmHighlights[highlight.id] = {
+              concepts: highlight.concepts || [],
+              facts: highlight.facts || [],
+              examples: highlight.examples || []
+            };
+          } else if (highlight.phrases) {
+            // Backward compatibility with old format
+            llmHighlights[highlight.id] = highlight.phrases;
+          }
         });
         applyHighlights(llmHighlights);
       }
@@ -321,7 +386,7 @@ async function handleButtonClick() {
     console.time('Concurrent Processing');
 
     // Process chunks with limited concurrency
-    await processConcurrentChunks(chunks, handleChunkResponse, CONFIG.MAX_CONCURRENT_REQUESTS);
+    await processConcurrentChunks(chunks, handleChunkResponse, CONFIG.MAX_CONCURRENT_REQUESTS, currentMode);
 
     console.timeEnd('Concurrent Processing');
 
