@@ -220,7 +220,7 @@ chrome.storage.local.get(['highlightColor'], (result) => {
 
 // 500ms defer: tag elements, then decide button visibility
 setTimeout(() => {
-  const targetElements = document.querySelectorAll('p');
+  const targetElements = document.querySelectorAll('p, li');
   targetElements.forEach((element, i) => {
     element.setAttribute('data-highlight-id', `para_${i}`);
   });
@@ -232,9 +232,8 @@ setTimeout(() => {
 // Process chunks with limited concurrency to maintain order and avoid API flooding
 async function processConcurrentChunks(chunks, responseManager, maxConcurrent = 2) {
   let index = 0;
-  const inProgress = new Map();
 
-  // Process a single chunk
+  // Process a single chunk and return its identity with the result
   const processChunk = async (chunk) => {
     try {
       const response = await fetch('http://localhost:3000/extract', {
@@ -256,27 +255,50 @@ async function processConcurrentChunks(chunks, responseManager, maxConcurrent = 
         console.warn(`Chunk ${chunk.chunkIndex} failed or no highlights:`, result);
         responseManager.addResponse(chunk.chunkIndex, []);
       }
+
+      return { chunkIndex: chunk.chunkIndex, completed: true };
     } catch (error) {
       console.error(`Error processing chunk ${chunk.chunkIndex}:`, error);
       responseManager.addResponse(chunk.chunkIndex, []);
+      return { chunkIndex: chunk.chunkIndex, completed: true };
     }
   };
 
-  // Keep maxConcurrent requests running at all times
-  while (index < chunks.length || inProgress.size > 0) {
-    // Start new requests up to the concurrent limit
-    while (inProgress.size < maxConcurrent && index < chunks.length) {
-      const chunk = chunks[index];
-      const promise = processChunk(chunk).then(() => {
-        inProgress.delete(chunk.chunkIndex);
-      });
-      inProgress.set(chunk.chunkIndex, promise);
-      index++;
+  // Sliding window: maintain exactly maxConcurrent requests
+  const activePromises = [];
+
+  // Start initial batch
+  for (let i = 0; i < Math.min(maxConcurrent, chunks.length); i++) {
+    const chunk = chunks[index++];
+    activePromises.push({
+      chunkIndex: chunk.chunkIndex,
+      promise: processChunk(chunk)
+    });
+  }
+
+  // Process remaining chunks with sliding window
+  while (activePromises.length > 0) {
+    // Wait for any promise to complete
+    const completedResult = await Promise.race(
+      activePromises.map(p => p.promise)
+    );
+
+    // Find and remove the completed promise
+    const completedIndex = activePromises.findIndex(
+      p => p.chunkIndex === completedResult.chunkIndex
+    );
+
+    if (completedIndex !== -1) {
+      activePromises.splice(completedIndex, 1);
     }
 
-    // Wait for at least one to complete before continuing
-    if (inProgress.size > 0) {
-      await Promise.race(Array.from(inProgress.values()));
+    // Start next chunk if available
+    if (index < chunks.length) {
+      const chunk = chunks[index++];
+      activePromises.push({
+        chunkIndex: chunk.chunkIndex,
+        promise: processChunk(chunk)
+      });
     }
   }
 }
