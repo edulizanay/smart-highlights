@@ -71,11 +71,14 @@ app.post('/extract', async (req, res) => {
       console.timeEnd(timerLabel);
       console.error('LLM processing error:', error.message);
 
-      // Return success but without highlights if LLM processing fails
+      // Graceful degradation: return success with empty highlights
       res.json({
         success: true,
         paragraphCount: Object.keys(actualParagraphs).length,
         message: 'Paragraphs received but LLM processing failed',
+        highlights: [],
+        llmError: true,
+        errorMessage: error.message,
         ...(isChunkedRequest && {
           chunkIndex,
           totalChunks
