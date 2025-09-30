@@ -6,6 +6,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const { processWithLLM } = require('./processors/llm-processor');
+const { logChunkProcessing } = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,67 +23,63 @@ app.use(express.json());
 // POST /extract - receive paragraph data from extension
 app.post('/extract', async (req, res) => {
   try {
-    const paragraphs = req.body;
+    const { chunkIndex, totalChunks, paragraphs } = req.body;
 
-    // Save data to JSON file (overwrites each time)
-    const dataToSave = {
-      timestamp: new Date().toISOString(),
-      paragraphCount: Object.keys(paragraphs).length,
-      paragraphs: paragraphs
-    };
-
-    // Ensure logs directory exists
-    const logsDir = path.join(__dirname, 'logs');
-    if (!fs.existsSync(logsDir)) {
-      fs.mkdirSync(logsDir);
-    }
-
-    const jsonFilePath = path.join(__dirname, 'logs', 'extracted-data.json');
-    fs.writeFileSync(jsonFilePath, JSON.stringify(dataToSave, null, 2));
+    // Handle both old format (direct paragraphs) and new format (chunks)
+    const actualParagraphs = paragraphs || req.body;
+    const isChunkedRequest = chunkIndex !== undefined;
 
     // Log received data for debugging
     console.log('=== RECEIVED PARAGRAPH DATA ===');
-    console.log(`Paragraphs received: ${Object.keys(paragraphs).length}`);
-    console.log(`Data saved to: ${jsonFilePath}`);
+    console.log(`Paragraphs received: ${Object.keys(actualParagraphs).length}`);
+    if (isChunkedRequest) {
+      console.log(`Chunk: ${chunkIndex + 1}/${totalChunks}`);
+    }
 
     // Send to OpenRouter LLM for highlighting analysis
-    console.time('LLM Processing');
+    const timerLabel = isChunkedRequest ? `LLM Processing Chunk ${chunkIndex}` : 'LLM Processing';
+    console.time(timerLabel);
     try {
-      const llmResult = await processWithLLM(paragraphs);
-      console.timeEnd('LLM Processing');
+      const llmResult = await processWithLLM(actualParagraphs);
+      console.timeEnd(timerLabel);
 
-      // Save the raw response
-      const llmResponsePath = path.join(__dirname, 'logs', 'llm-response.json');
-      fs.writeFileSync(llmResponsePath, JSON.stringify(llmResult.rawResponse, null, 2));
-      console.log('LLM response saved to:', llmResponsePath);
-
-      // Create and save readable log
-      const { createReadableLog } = require('./processors/llm-processor');
-      const llmContent = llmResult.rawResponse.choices[0].message.content;
-      const readableLogContent = createReadableLog(llmContent);
-
-      
-      const readableLogPath = path.join(__dirname, 'logs', 'llm-readable-log.txt');
-      fs.writeFileSync(readableLogPath, readableLogContent);
-      console.log('Readable log saved to:', readableLogPath);
-
-      // Return success response with LLM highlights
+      // Return success response with LLM highlights and chunk metadata
       res.json({
         success: true,
-        paragraphCount: Object.keys(paragraphs).length,
+        paragraphCount: Object.keys(actualParagraphs).length,
         message: 'Paragraphs received and processed successfully',
-        highlights: llmResult.highlights
+        highlights: llmResult.highlights,
+        ...(isChunkedRequest && {
+          chunkIndex,
+          totalChunks
+        })
       });
 
+      // Log asynchronously after response sent (non-blocking)
+      if (process.env.LOG_LEVEL === 'DEBUG' || process.env.LOG_LEVEL === 'INFO') {
+        logChunkProcessing(
+          isChunkedRequest ? chunkIndex : 0,
+          isChunkedRequest ? totalChunks : 1,
+          actualParagraphs,
+          llmResult
+        ).catch(err => {
+          console.error('Async logging failed:', err.message);
+        });
+      }
+
     } catch (error) {
-      console.timeEnd('LLM Processing');
+      console.timeEnd(timerLabel);
       console.error('LLM processing error:', error.message);
 
       // Return success but without highlights if LLM processing fails
       res.json({
         success: true,
-        paragraphCount: Object.keys(paragraphs).length,
-        message: 'Paragraphs received but LLM processing failed'
+        paragraphCount: Object.keys(actualParagraphs).length,
+        message: 'Paragraphs received but LLM processing failed',
+        ...(isChunkedRequest && {
+          chunkIndex,
+          totalChunks
+        })
       });
     }
 
