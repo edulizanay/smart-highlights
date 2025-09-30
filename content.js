@@ -35,18 +35,26 @@ function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-hig
 
       if (newHtml !== element.innerHTML) {
         element.innerHTML = newHtml;
-        totalHighlights++;
 
-        // Fade in the highlight
-        const newHighlight = element.querySelector(`span.${highlightClass}[style*="opacity: 0"]`);
-        if (newHighlight) {
-          newHighlight.style.setProperty('background-color', currentHighlightColor, 'important');
-          newHighlight.style.setProperty('color', textColor, 'important');
-          newHighlight.style.transition = 'opacity 0.3s ease-in';
-          newHighlight.style.opacity = '1';
+        // Fade in new highlights reliably using next-frame promotion (covers multiple matches)
+        const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
+        if (newHighlights.length > 0) {
+          // Next frame: attach transition
+          requestAnimationFrame(() => {
+            newHighlights.forEach(h => {
+              h.style.transition = 'opacity 0.18s ease-out';
+            });
+            // Following frame: toggle to visible so transition runs
+            requestAnimationFrame(() => {
+              newHighlights.forEach(h => {
+                h.style.opacity = '1';
+              });
+            });
+          });
         }
       }
     }, index * delay);
+
   });
 
   return allHighlights.length;
@@ -55,6 +63,57 @@ function applyHighlightsSequentially(highlightsData, highlightClass = 'smart-hig
 // Legacy function for instant highlights (kept for compatibility)
 function applyHighlights(highlightsData, highlightClass = 'smart-highlight') {
   return applyHighlightsSequentially(highlightsData, highlightClass, 0);
+}
+
+// Apply highlights instantly without sequential delay for chunk processing
+function applyHighlightsInstantly(highlightsData, highlightClass = 'smart-highlight') {
+  const taggedElements = document.querySelectorAll('[data-highlight-id]');
+  let totalHighlights = 0;
+
+  taggedElements.forEach(element => {
+    const paragraphId = element.getAttribute('data-highlight-id');
+    const phrasesToHighlight = highlightsData[paragraphId];
+
+    if (!phrasesToHighlight || phrasesToHighlight.length === 0) {
+      return;
+    }
+
+    // Apply all phrases for this paragraph in one pass
+    let modifiedHtml = element.innerHTML;
+    const textColor = SmartUI.getTextColor(currentHighlightColor);
+
+    phrasesToHighlight.forEach(phrase => {
+      const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedPhrase})`, 'gi');
+      modifiedHtml = modifiedHtml.replace(
+        regex,
+        `<span class="${highlightClass}" style="opacity: 0; background-color: ${currentHighlightColor} !important; color: ${textColor} !important;">$1</span>`
+      );
+      totalHighlights++;
+    });
+
+    // Apply the modified HTML once
+    if (modifiedHtml !== element.innerHTML) {
+      element.innerHTML = modifiedHtml;
+
+      // Fade in new highlights using requestAnimationFrame
+      const newHighlights = element.querySelectorAll(`span.${highlightClass}[style*="opacity: 0"]`);
+      if (newHighlights.length > 0) {
+        requestAnimationFrame(() => {
+          newHighlights.forEach(h => {
+            h.style.transition = 'opacity 0.18s ease-out';
+          });
+          requestAnimationFrame(() => {
+            newHighlights.forEach(h => {
+              h.style.opacity = '1';
+            });
+          });
+        });
+      }
+    }
+  });
+
+  return totalHighlights;
 }
 
 // Persistent color state
@@ -115,43 +174,25 @@ function chunkParagraphs(extractedData, maxChars = 500) {
   return chunks;
 }
 
-// Chunk Response Manager for coordinating parallel LLM responses
+// Chunk Response Manager with immediate rendering for optimal UX
 class ChunkResponseManager {
   constructor(totalChunks, applyHighlightsFunction) {
     this.totalChunks = totalChunks;
     this.applyHighlights = applyHighlightsFunction;
-    this.nextChunkToProcess = 0;
-    this.responses = new Map(); // chunkIndex -> highlights
     this.processedChunks = new Set();
   }
 
   addResponse(chunkIndex, highlights) {
-    // Ignore duplicate responses
-    if (this.responses.has(chunkIndex)) {
+    // Skip if already processed
+    if (this.processedChunks.has(chunkIndex)) {
       return;
     }
 
-    // Store the response
-    this.responses.set(chunkIndex, highlights);
+    this.processedChunks.add(chunkIndex);
 
-    // Process any ready chunks starting from nextChunkToProcess
-    this.processNextReady();
-  }
-
-  processNextReady() {
-    // Process chunks in order if they're ready
-    while (this.responses.has(this.nextChunkToProcess) &&
-           !this.processedChunks.has(this.nextChunkToProcess)) {
-
-      const highlights = this.responses.get(this.nextChunkToProcess);
-      this.processedChunks.add(this.nextChunkToProcess);
-
-      // Apply highlights if any exist
-      if (highlights && highlights.length > 0) {
-        this.applyHighlights(highlights);
-      }
-
-      this.nextChunkToProcess++;
+    // Immediately apply highlights for this chunk
+    if (highlights && highlights.length > 0) {
+      this.applyHighlights(highlights);
     }
   }
 
@@ -187,6 +228,58 @@ setTimeout(() => {
   SmartUI.setButtonVisible(targetElements.length > 4);
   console.log(`Smart Highlights: Tagged ${targetElements.length} elements for processing`);
 }, 500);
+
+// Process chunks with limited concurrency to maintain order and avoid API flooding
+async function processConcurrentChunks(chunks, responseManager, maxConcurrent = 2) {
+  let index = 0;
+  const inProgress = new Map();
+
+  // Process a single chunk
+  const processChunk = async (chunk) => {
+    try {
+      const response = await fetch('http://localhost:3000/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chunkIndex: chunk.chunkIndex,
+          totalChunks: chunk.totalChunks,
+          paragraphs: chunk.paragraphs
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.highlights) {
+        console.log(`Chunk ${chunk.chunkIndex} processed: ${result.highlights.length} highlights`);
+        responseManager.addResponse(chunk.chunkIndex, result.highlights);
+      } else {
+        console.warn(`Chunk ${chunk.chunkIndex} failed or no highlights:`, result);
+        responseManager.addResponse(chunk.chunkIndex, []);
+      }
+    } catch (error) {
+      console.error(`Error processing chunk ${chunk.chunkIndex}:`, error);
+      responseManager.addResponse(chunk.chunkIndex, []);
+    }
+  };
+
+  // Keep maxConcurrent requests running at all times
+  while (index < chunks.length || inProgress.size > 0) {
+    // Start new requests up to the concurrent limit
+    while (inProgress.size < maxConcurrent && index < chunks.length) {
+      const chunk = chunks[index];
+      const promise = processChunk(chunk).then(() => {
+        inProgress.delete(chunk.chunkIndex);
+      });
+      inProgress.set(chunk.chunkIndex, promise);
+      index++;
+    }
+
+    // Wait for at least one to complete before continuing
+    if (inProgress.size > 0) {
+      await Promise.race(Array.from(inProgress.values()));
+    }
+  }
+}
 
 async function handleButtonClick() {
   if (isProcessing) return;
@@ -228,44 +321,17 @@ async function handleButtonClick() {
         llmHighlights[highlight.id] = highlight.phrases;
       });
 
-      // Apply highlights with sequential animation
-      applyHighlightsSequentially(llmHighlights);
+      // Apply highlights instantly for chunk processing
+      applyHighlightsInstantly(llmHighlights);
     });
 
-    console.log('Sending chunks to backend in parallel...');
-    console.time('Parallel Network Requests');
+    console.log(`Sending ${chunks.length} chunks with 2 concurrent requests...`);
+    console.time('Concurrent Processing');
 
-    // Send all chunks in parallel
-    const chunkPromises = chunks.map(async (chunk) => {
-      try {
-        const response = await fetch('http://localhost:3000/extract', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chunkIndex: chunk.chunkIndex,
-            totalChunks: chunk.totalChunks,
-            paragraphs: chunk.paragraphs
-          })
-        });
+    // Process chunks with limited concurrency
+    await processConcurrentChunks(chunks, responseManager, 2);
 
-        const result = await response.json();
-
-        if (response.ok && result.highlights) {
-          console.log(`Chunk ${chunk.chunkIndex} processed: ${result.highlights.length} highlights`);
-          responseManager.addResponse(chunk.chunkIndex, result.highlights);
-        } else {
-          console.warn(`Chunk ${chunk.chunkIndex} failed or no highlights:`, result);
-          responseManager.addResponse(chunk.chunkIndex, []);
-        }
-      } catch (error) {
-        console.error(`Error processing chunk ${chunk.chunkIndex}:`, error);
-        responseManager.addResponse(chunk.chunkIndex, []);
-      }
-    });
-
-    // Wait for all chunks to complete
-    await Promise.all(chunkPromises);
-    console.timeEnd('Parallel Network Requests');
+    console.timeEnd('Concurrent Processing');
 
     // Check completion
     if (responseManager.isComplete()) {

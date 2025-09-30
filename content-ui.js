@@ -29,7 +29,7 @@
     }
     .smart-highlights-button {
       position: fixed;
-      top: 20px;
+      top: calc(20px + 8vh);
       right: 20px;
       width: 40px;
       height: 40px;

@@ -6,6 +6,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const { processWithLLM } = require('./processors/llm-processor');
+const { logChunkProcessing } = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,38 +29,12 @@ app.post('/extract', async (req, res) => {
     const actualParagraphs = paragraphs || req.body;
     const isChunkedRequest = chunkIndex !== undefined;
 
-    // Save data to JSON file (append chunk info if chunked)
-    const dataToSave = {
-      timestamp: new Date().toISOString(),
-      paragraphCount: Object.keys(actualParagraphs).length,
-      paragraphs: actualParagraphs,
-      ...(isChunkedRequest && {
-        chunkIndex,
-        totalChunks,
-        isChunk: true
-      })
-    };
-
-    // Ensure logs directory exists
-    const logsDir = path.join(__dirname, 'logs');
-    if (!fs.existsSync(logsDir)) {
-      fs.mkdirSync(logsDir);
-    }
-
-    // Save with chunk-specific filename if chunked
-    const fileName = isChunkedRequest ?
-      `extracted-data-chunk-${chunkIndex}.json` :
-      'extracted-data.json';
-    const jsonFilePath = path.join(__dirname, 'logs', fileName);
-    fs.writeFileSync(jsonFilePath, JSON.stringify(dataToSave, null, 2));
-
     // Log received data for debugging
     console.log('=== RECEIVED PARAGRAPH DATA ===');
     console.log(`Paragraphs received: ${Object.keys(actualParagraphs).length}`);
     if (isChunkedRequest) {
       console.log(`Chunk: ${chunkIndex + 1}/${totalChunks}`);
     }
-    console.log(`Data saved to: ${jsonFilePath}`);
 
     // Send to OpenRouter LLM for highlighting analysis
     const timerLabel = isChunkedRequest ? `LLM Processing Chunk ${chunkIndex}` : 'LLM Processing';
@@ -67,26 +42,6 @@ app.post('/extract', async (req, res) => {
     try {
       const llmResult = await processWithLLM(actualParagraphs);
       console.timeEnd(timerLabel);
-
-      // Save the raw response with chunk-specific filename
-      const responseFileName = isChunkedRequest ?
-        `llm-response-chunk-${chunkIndex}.json` :
-        'llm-response.json';
-      const llmResponsePath = path.join(__dirname, 'logs', responseFileName);
-      fs.writeFileSync(llmResponsePath, JSON.stringify(llmResult.rawResponse, null, 2));
-      console.log('LLM response saved to:', llmResponsePath);
-
-      // Create and save readable log
-      const { createReadableLog } = require('./processors/llm-processor');
-      const llmContent = llmResult.rawResponse.choices[0].message.content;
-      const readableLogContent = createReadableLog(llmContent);
-
-      const logFileName = isChunkedRequest ?
-        `llm-readable-log-chunk-${chunkIndex}.txt` :
-        'llm-readable-log.txt';
-      const readableLogPath = path.join(__dirname, 'logs', logFileName);
-      fs.writeFileSync(readableLogPath, readableLogContent);
-      console.log('Readable log saved to:', readableLogPath);
 
       // Return success response with LLM highlights and chunk metadata
       res.json({
@@ -99,6 +54,18 @@ app.post('/extract', async (req, res) => {
           totalChunks
         })
       });
+
+      // Log asynchronously after response sent (non-blocking)
+      if (process.env.LOG_LEVEL === 'DEBUG' || process.env.LOG_LEVEL === 'INFO') {
+        logChunkProcessing(
+          isChunkedRequest ? chunkIndex : 0,
+          isChunkedRequest ? totalChunks : 1,
+          actualParagraphs,
+          llmResult
+        ).catch(err => {
+          console.error('Async logging failed:', err.message);
+        });
+      }
 
     } catch (error) {
       console.timeEnd(timerLabel);
