@@ -2,6 +2,17 @@
 // TIMING: Even at document_end, defer DOM mutations (~500ms) so site JS doesn't revert them.
 // RELIABILITY: Use a two-pass flow—tag elements first, then query fresh and apply changes.
 
+// Configuration constants
+const CONFIG = {
+  HIGHLIGHT_DELAY_MS: 400,
+  CHUNK_MAX_CHARS: 500,
+  DOM_READY_DELAY_MS: 500,
+  MIN_PARAGRAPHS_FOR_BUTTON: 4,
+  MIN_TEXT_LENGTH: 30,
+  MAX_CONCURRENT_REQUESTS: 2,
+  API_ENDPOINT: 'http://localhost:3000/extract'
+};
+
 // Helper: Escape special regex characters
 function escapeForRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -171,16 +182,16 @@ chrome.storage.local.get(['highlightColor'], (result) => {
   });
 });
 
-// 500ms defer: tag elements, then decide button visibility
+// Defer DOM mutations so site JS doesn't revert them
 setTimeout(() => {
   const targetElements = document.querySelectorAll('p, li');
   targetElements.forEach((element, i) => {
     element.setAttribute('data-highlight-id', `para_${i}`);
   });
 
-  SmartUI.setButtonVisible(targetElements.length > 4);
+  SmartUI.setButtonVisible(targetElements.length > CONFIG.MIN_PARAGRAPHS_FOR_BUTTON);
   console.log(`Smart Highlights: Tagged ${targetElements.length} elements for processing`);
-}, 500);
+}, CONFIG.DOM_READY_DELAY_MS);
 
 // Process chunks with limited concurrency to maintain order and avoid API flooding
 async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2) {
@@ -189,7 +200,7 @@ async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent =
   // Process a single chunk and return its identity with the result
   const processChunk = async (chunk) => {
     try {
-      const response = await fetch('http://localhost:3000/extract', {
+      const response = await fetch(CONFIG.API_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -273,13 +284,13 @@ async function handleButtonClick() {
     taggedElements.forEach(element => {
       const id = element.getAttribute('data-highlight-id');
       const text = element.textContent.trim();
-      if (text.length > 30) {  // Filter out short UI text
+      if (text.length > CONFIG.MIN_TEXT_LENGTH) {
         extractedData[id] = text;
       }
     });
 
     // Chunk the data for parallel processing
-    const chunks = chunkParagraphs(extractedData, 500);
+    const chunks = chunkParagraphs(extractedData, CONFIG.CHUNK_MAX_CHARS);
     console.log(`Chunked ${Object.keys(extractedData).length} paragraphs into ${chunks.length} chunks`);
 
     if (chunks.length === 0) {
@@ -306,11 +317,11 @@ async function handleButtonClick() {
       }
     }
 
-    console.log(`Sending ${chunks.length} chunks with 2 concurrent requests...`);
+    console.log(`Sending ${chunks.length} chunks with ${CONFIG.MAX_CONCURRENT_REQUESTS} concurrent requests...`);
     console.time('Concurrent Processing');
 
     // Process chunks with limited concurrency
-    await processConcurrentChunks(chunks, handleChunkResponse, 2);
+    await processConcurrentChunks(chunks, handleChunkResponse, CONFIG.MAX_CONCURRENT_REQUESTS);
 
     console.timeEnd('Concurrent Processing');
 
