@@ -153,32 +153,6 @@ function chunkParagraphs(extractedData, maxChars = 500) {
   return chunks;
 }
 
-// Chunk Response Manager with immediate rendering for optimal UX
-class ChunkResponseManager {
-  constructor(totalChunks, applyHighlightsFunction) {
-    this.totalChunks = totalChunks;
-    this.applyHighlights = applyHighlightsFunction;
-    this.processedChunks = new Set();
-  }
-
-  addResponse(chunkIndex, highlights) {
-    // Skip if already processed
-    if (this.processedChunks.has(chunkIndex)) {
-      return;
-    }
-
-    this.processedChunks.add(chunkIndex);
-
-    // Immediately apply highlights for this chunk
-    if (highlights && highlights.length > 0) {
-      this.applyHighlights(highlights);
-    }
-  }
-
-  isComplete() {
-    return this.processedChunks.size === this.totalChunks;
-  }
-}
 
 // Initialize UI after loading saved color, then wire callbacks
 chrome.storage.local.get(['highlightColor'], (result) => {
@@ -209,7 +183,7 @@ setTimeout(() => {
 }, 500);
 
 // Process chunks with limited concurrency to maintain order and avoid API flooding
-async function processConcurrentChunks(chunks, responseManager, maxConcurrent = 2) {
+async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2) {
   let index = 0;
 
   // Process a single chunk and return its identity with the result
@@ -229,16 +203,16 @@ async function processConcurrentChunks(chunks, responseManager, maxConcurrent = 
 
       if (response.ok && result.highlights) {
         console.log(`Chunk ${chunk.chunkIndex} processed: ${result.highlights.length} highlights`);
-        responseManager.addResponse(chunk.chunkIndex, result.highlights);
+        onChunkProcessed(chunk.chunkIndex, result.highlights);
       } else {
         console.warn(`Chunk ${chunk.chunkIndex} failed or no highlights:`, result);
-        responseManager.addResponse(chunk.chunkIndex, []);
+        onChunkProcessed(chunk.chunkIndex, []);
       }
 
       return { chunkIndex: chunk.chunkIndex, completed: true };
     } catch (error) {
       console.error(`Error processing chunk ${chunk.chunkIndex}:`, error);
-      responseManager.addResponse(chunk.chunkIndex, []);
+      onChunkProcessed(chunk.chunkIndex, []);
       return { chunkIndex: chunk.chunkIndex, completed: true };
     }
   };
@@ -314,28 +288,34 @@ async function handleButtonClick() {
       return;
     }
 
-    // Set up response manager
-    const responseManager = new ChunkResponseManager(chunks.length, (highlights) => {
-      // Convert LLM highlights array to object format for highlighting
-      const llmHighlights = {};
-      highlights.forEach(highlight => {
-        llmHighlights[highlight.id] = highlight.phrases;
-      });
+    // Track processed chunks
+    const processedChunks = new Set();
 
-      // Apply highlights instantly for chunk processing
-      applyHighlights(llmHighlights);
-    });
+    // Handle chunk response callback
+    function handleChunkResponse(chunkIndex, highlights) {
+      if (processedChunks.has(chunkIndex)) return;
+      processedChunks.add(chunkIndex);
+
+      if (highlights?.length > 0) {
+        // Convert LLM highlights array to object format for highlighting
+        const llmHighlights = {};
+        highlights.forEach(highlight => {
+          llmHighlights[highlight.id] = highlight.phrases;
+        });
+        applyHighlights(llmHighlights);
+      }
+    }
 
     console.log(`Sending ${chunks.length} chunks with 2 concurrent requests...`);
     console.time('Concurrent Processing');
 
     // Process chunks with limited concurrency
-    await processConcurrentChunks(chunks, responseManager, 2);
+    await processConcurrentChunks(chunks, handleChunkResponse, 2);
 
     console.timeEnd('Concurrent Processing');
 
     // Check completion
-    if (responseManager.isComplete()) {
+    if (processedChunks.size === chunks.length) {
       console.log('All chunks processed successfully');
       setTimeout(() => {
         console.timeEnd('Total Processing');
