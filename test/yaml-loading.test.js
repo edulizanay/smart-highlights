@@ -18,7 +18,7 @@ test('Test 1: YAML file loads without errors', () => {
 
 test('Test 2: Can get study_mode prompt from YAML', () => {
   // This will fail until we implement the prompt loader
-  const { getPrompt } = require('../processors/prompt-loader');
+  const { getPrompt } = require('../processors/llm-processor');
 
   const studyPrompt = getPrompt('study_mode');
 
@@ -32,7 +32,7 @@ test('Test 2: Can get study_mode prompt from YAML', () => {
 
 test('Test 3: Template placeholder gets replaced with actual JSON', () => {
   // This will fail until we implement template replacement
-  const { fillTemplate } = require('../processors/prompt-loader');
+  const { fillTemplate } = require('../processors/llm-processor');
 
   const templatePrompt = 'Here is the data: {{PARAGRAPHS_JSON}}';
   const testData = { para_0: 'Test paragraph' };

@@ -8,7 +8,7 @@ const path = require('path');
  * Log chunk processing data to consolidated NDJSON file
  * Each line is a complete JSON object for safe concurrent appends
  */
-async function logChunkProcessing(chunkIndex, totalChunks, paragraphs, llmResult) {
+async function logChunkProcessing(runId, chunkIndex, totalChunks, paragraphs, llmResult) {
   try {
     // Ensure logs directory exists
     const logsDir = path.join(__dirname, '..', 'logs');
@@ -16,6 +16,7 @@ async function logChunkProcessing(chunkIndex, totalChunks, paragraphs, llmResult
 
     // Create log entry
     const logEntry = {
+      run_id: runId,
       timestamp: new Date().toISOString(),
       chunkIndex,
       totalChunks,

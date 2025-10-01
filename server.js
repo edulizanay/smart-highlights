@@ -61,6 +61,7 @@ function validateParagraphData(req, res, next) {
 app.post('/extract', validateParagraphData, async (req, res) => {
   try {
     const { chunkIndex, totalChunks, paragraphs, mode } = req.body;
+    const runId = req.query.run_id ? parseInt(req.query.run_id) : 1;
 
     // Handle both old format (direct paragraphs) and new format (chunks)
     const actualParagraphs = paragraphs || req.body;
@@ -97,6 +98,7 @@ app.post('/extract', validateParagraphData, async (req, res) => {
       // Log asynchronously after response sent (non-blocking)
       if (process.env.LOG_LEVEL === 'DEBUG' || process.env.LOG_LEVEL === 'INFO') {
         logChunkProcessing(
+          runId,
           isChunkedRequest ? chunkIndex : 0,
           isChunkedRequest ? totalChunks : 1,
           actualParagraphs,

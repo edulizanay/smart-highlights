@@ -35,41 +35,551 @@ prompts:
     user_prompt: |
       You are a student learning from study materials, and you are highlighting important information. You will receive chunks of text, and your job is to highlight important phrases in three types:
 
-      1. CONCEPTS: Definitions, key terms, important concepts being introduced or defined
-      2. FACTS: Specific data, statistics, names, dates, concrete factual information
-      3. EXAMPLES: Examples, analogies, applications, or illustrations of concepts
+      1. TERMS: Vocabulary words being introduced or defined for the first time in this text
+      2. CONCEPTS: Core ideas, mechanisms, findings, or explanations being presented (the "thesis sentence")
+      3. EXAMPLES: Concrete instances, analogies, or illustrations that help readers visualize abstract concepts
 
-      Rules:
-      - Only highlight terms as CONCEPTS if they are being defined or introduced in this text
-      - Don't over-highlight—focus on what's truly important for studying
+      # Category Guidelines
 
-      Use <thinking> tags to analyze the text, then return a JSON object with this exact format in <response> tags:
+      ## TERMS - Vocabulary Being Introduced
+      **What to highlight**: ONLY the term itself (just the word/phrase), NOT the definition
+      **Recognition signals** (need multiple, not just one):
+      - First appearance in the text
+      - Followed by definition language: "is", "refers to", "means", "is defined as", "—that is"
+      - Author is teaching this vocabulary, not just using it
+
+
+      **Test**: "If skimming, does this highlight help me quickly find where this term is being introduced?"
+      
+      ## CONCEPTS - Ideas Being Explained
+      **What to highlight**: The thesis sentence - the ONE sentence (max 2) that captures the core mechanism, finding, or insight
+      **Purpose**: Help someone reviewing later quickly re-grasp the key idea
+
+      **What to INCLUDE**:
+      - The sentence stating the mechanism/finding most directly
+      - The conclusion or "how it works" statement
+      - The core insight, not the journey to it
+
+      **What to EXCLUDE**:
+      - Setup or context leading to the insight
+      - Examples used to support the concept
+      - Implications or "so what" discussion
+      - Methodology describing how it was discovered
+      - Repetitions or restatements
+
+      **Test**: "If reviewing later, would this sentence alone re-trigger my understanding of the mechanism?"
+
+      ## EXAMPLES - Illustrations Helping Understanding
+
+      **What to highlight**: Concrete instances PLUS the framing that signals illustrative intent
+
+      **Purpose**: Help readers visualize what an abstract concept looks like in practice
+
+      **Critical distinction**: 
+      - ILLUSTRATION = Concrete instance presented to help readers understand
+      - METHODOLOGY = Description of what researchers/authors tested (NOT an example)
+
+      **Must have BOTH**:
+      1. Concrete specificity (you can point to it: "this phrase," "this case," "this scenario")
+      2. Illustrative framing (signals it's meant to help you understand something)
+
+      **Recognition signals to INCLUDE**:
+      - "For example," / "For instance," / "Consider..."
+      - "Take the case of..." / "Look at..." / "Notice how..."
+      - "Say," / "Such as" (when introducing illustrative cases)
+      - "This is similar to..." / "This explains why..."
+      - Comparative structures: "Instead of X, try Y..."
+
+      **What NOT to highlight as examples**:
+      - "We tested X" or "We investigated Y" (methodology)
+      - Facts or data stated without illustrative purpose
+      - Passing references or mentions
+
+      **Test**: "Does this help me SEE/PICTURE what the abstract concept means, and is the illustrative intent clear from the framing?"
+
+      # Output Format
+
+      Use <thinking> tags to analyze the text thoroughly, then return a JSON object with this exact format in <response> tags:
 
       {
         "highlights": [
           {
             "id": "para_0",
-            "concepts": ["term being defined"],
-            "facts": ["complete factual statement"],
-            "examples": ["full example phrase"]
+            "terms": ["vocabulary word only"],
+            "concepts": ["thesis sentence capturing the mechanism"],
+            "examples": ["framing + concrete instance"]
           }
         ]
       }
 
-      Example: If para_3 contains "Machine learning is a type of AI that learns from data. In 2024, Google achieved 87% accuracy using neural networks. OpenAI reported similar results. This is similar to teaching a child to recognize patterns."
+      Only include paragraphs with important content. Not every paragraph needs all three types.
+
+      # Examples Showing Correct Highlighting
+
+      ## Example 1: Psychology Text
+
+      **Text**: "Cognitive load refers to the total amount of mental effort being used in working memory. When learners face too much information at once, their performance drops significantly. For instance, students trying to solve math problems while memorizing formulas simultaneously show 40% lower accuracy than those who learn each skill separately."
 
       <thinking>
-      - "Machine learning" is being defined/introduced - this is a CONCEPT
-      - "In 2024, Google achieved 87% accuracy" and "OpenAI reported similar results" are factual statements - these are FACTS
-      - "similar to teaching a child to recognize patterns" is an analogy explaining the concept - this is an EXAMPLE
-      - "AI" is only mentioned, not defined, so skip it
+      Let me analyze each sentence:
+
+      1. "Cognitive load refers to the total amount of mental effort being used in working memory"
+        - "Cognitive load" is being DEFINED (has "refers to")
+        - This is introducing vocabulary
+        - Highlight "Cognitive load" as a TERM
+        - The definition itself "the total amount of mental effort being used in working memory" explains WHAT it is - this is a CONCEPT
+
+      2. "When learners face too much information at once, their performance drops significantly"
+        - This explains the MECHANISM - what happens when cognitive load is too high
+        - This is the thesis sentence about how it works
+        - Highlight as CONCEPT
+
+      3. "For instance, students trying to solve math problems while memorizing formulas simultaneously show 40% lower accuracy than those who learn each skill separately"
+        - "For instance" signals this is an EXAMPLE
+        - It provides a concrete scenario illustrating the concept
+        - The "40% lower accuracy" makes it specific and concrete
+        - Highlight the full sentence INCLUDING "For instance" as an EXAMPLE
       </thinking>
 
       <response>
-      {"highlights": [{"id": "para_3", "concepts": ["Machine learning"], "facts": ["In 2024, Google achieved 87% accuracy", "OpenAI reported similar results"], "examples": ["similar to teaching a child to recognize patterns"]}]}
+      {
+        "highlights": [
+          {
+            "id": "para_1",
+            "terms": ["Cognitive load"],
+            "concepts": ["the total amount of mental effort being used in working memory", "When learners face too much information at once, their performance drops significantly"],
+            "examples": ["For instance, students trying to solve math problems while memorizing formulas simultaneously show 40% lower accuracy than those who learn each skill separately"]
+          }
+        ]
+      }
       </response>
 
-      Only include paragraphs with important content. Not every paragraph needs all three types.
+      **Explanation**: 
+      - TERM: Just "Cognitive load" (not the definition) - helps someone skimming find the vocabulary
+      - CONCEPTS: Two key ideas - (1) what it IS and (2) what HAPPENS when it's overloaded
+      - EXAMPLE: Includes "For instance" framing + the concrete scenario that helps visualize the concept
+
+      ---
+
+      ## Example 2: Business Text
+
+      **Text**: "Market segmentation is the practice of dividing a customer base into distinct groups. Companies use demographics, behaviors, and preferences to create these segments. Consider Nike's approach: they target serious athletes with high-performance gear, casual exercisers with lifestyle products, and fashion-conscious consumers with collaborations. Each segment receives tailored messaging and products."
+
+      <thinking>
+      Let me analyze:
+
+      1. "Market segmentation is the practice of dividing a customer base into distinct groups"
+        - "Market segmentation" is being DEFINED ("is the practice of")
+        - Highlight "Market segmentation" as TERM
+        - "the practice of dividing a customer base into distinct groups" is the definition - this is a CONCEPT
+
+      2. "Companies use demographics, behaviors, and preferences to create these segments"
+        - This explains HOW segmentation is done
+        - But the next sentence has a more concrete mechanism
+        - This might not be the best thesis sentence
+
+      3. "Consider Nike's approach: they target serious athletes with high-performance gear, casual exercisers with lifestyle products, and fashion-conscious consumers with collaborations"
+        - "Consider" signals this is an EXAMPLE
+        - Shows a concrete case of market segmentation in action
+        - Includes specific segments and products
+        - This is an ILLUSTRATION
+        - Highlight including "Consider Nike's approach:" as EXAMPLE
+
+      4. "Each segment receives tailored messaging and products"
+        - This is a CONCEPT - explains the mechanism of how segmentation works
+        - This is the thesis sentence about the purpose/mechanism
+        - Highlight as CONCEPT
+
+      Should I highlight sentence 2? It explains methodology but isn't really the core insight. The core insight is in sentence 4 about tailored messaging. Skip sentence 2.
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_2",
+            "terms": ["Market segmentation"],
+            "concepts": ["the practice of dividing a customer base into distinct groups", "Each segment receives tailored messaging and products"],
+            "examples": ["Consider Nike's approach: they target serious athletes with high-performance gear, casual exercisers with lifestyle products, and fashion-conscious consumers with collaborations"]
+          }
+        ]
+      }
+      </response>
+
+      **Explanation**:
+      - TERM: Just "Market segmentation" 
+      - CONCEPTS: (1) The definition and (2) the mechanism/purpose - why you do it (tailored approach)
+      - EXAMPLE: Includes "Consider Nike's approach:" framing + concrete segments showing what it looks like in practice
+
+      ---
+
+      ## Example 3: History Text  
+
+      **Text**: "The printing press revolutionized information distribution in Europe. Invented by Gutenberg around 1440, it used movable type to mass-produce books. Before the printing press, monks spent months hand-copying single manuscripts. After its introduction, the same text could be reproduced hundreds of times in weeks. By 1500, an estimated 20 million books had been printed."
+
+      <thinking>
+      Let me analyze:
+
+      1. "The printing press revolutionized information distribution in Europe"
+        - "printing press" is mentioned but not really DEFINED here
+        - "revolutionized information distribution" - is this the core concept?
+        - This is more of an overview statement
+
+      2. "Invented by Gutenberg around 1440, it used movable type to mass-produce books"
+        - Historical context and date
+        - Not really a concept being explained or a term being defined
+        - Just background information
+
+      3. "Before the printing press, monks spent months hand-copying single manuscripts. After its introduction, the same text could be reproduced hundreds of times in weeks."
+        - This is a BEFORE/AFTER comparison showing the impact
+        - "Before...After..." structure is comparative, showing contrast
+        - This makes the abstract concept of "revolutionized" concrete
+        - But there's no explicit framing like "For example" or "Consider"
+        - However, the before/after structure itself serves as framing
+        - This is borderline - it's illustrating the impact through contrast
+        - The concrete comparison (months for one vs. weeks for hundreds) helps visualize the change
+        - I'll include this as an EXAMPLE because it makes the abstract "revolutionized" concrete
+
+      4. "By 1500, an estimated 20 million books had been printed"
+        - This is just a statistic
+        - Not being used to illustrate a concept, just stating a fact
+        - Don't highlight as any category
+
+      What about the core CONCEPT? The thesis sentence is the before/after comparison showing the mechanism of impact. That's also the example. Sometimes the example IS the concept explanation.
+
+      Actually, rethinking: The concept is "revolutionized information distribution" - but what does that mean? The before/after shows WHAT the revolution was - the mechanism. That before/after comparison is the CONCEPT explanation.
+
+      Wait, I need to be clearer:
+      - CONCEPT: "the same text could be reproduced hundreds of times in weeks" (the mechanism - what changed)
+      - EXAMPLE: The before/after framing makes it concrete
+
+      Actually, the whole before/after is one integrated illustration. Let me include it as EXAMPLE because it has comparative framing and makes the abstract concept concrete.
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_3",
+            "terms": [],
+            "concepts": [],
+            "examples": ["Before the printing press, monks spent months hand-copying single manuscripts. After its introduction, the same text could be reproduced hundreds of times in weeks"]
+          }
+        ]
+      }
+      </response>
+
+      **Explanation**:
+      - TERM: None - "printing press" is mentioned but not defined in this text
+      - CONCEPT: The before/after comparison itself IS the explanation, but it's presented illustratively through contrast, so it's an EXAMPLE
+      - EXAMPLE: The before/after structure serves as framing, making "revolutionized" concrete through specific comparison
+
+      ---
+
+      ## Example 4: Science Text
+
+      **Text**: "Photosynthesis is the process by which plants convert light energy into chemical energy. This occurs in chloroplasts, where chlorophyll absorbs light. We studied this by exposing plants to different light wavelengths and measuring glucose production. Results showed that red and blue light produced the most glucose."
+
+      <thinking>
+      Let me analyze:
+
+      1. "Photosynthesis is the process by which plants convert light energy into chemical energy"
+        - "Photosynthesis" is being DEFINED ("is the process by which")
+        - Highlight "Photosynthesis" as TERM
+        - "the process by which plants convert light energy into chemical energy" is the definition - CONCEPT
+
+      2. "This occurs in chloroplasts, where chlorophyll absorbs light"
+        - Explains WHERE it happens and HOW (chlorophyll absorbs light)
+        - This is additional mechanism detail - CONCEPT
+        - This is the thesis sentence about the mechanism
+
+      3. "We studied this by exposing plants to different light wavelengths and measuring glucose production"
+        - "We studied this by..." is METHODOLOGY
+        - This describes what researchers did, not an illustration for readers
+        - NOT an example
+        - Don't highlight
+
+      4. "Results showed that red and blue light produced the most glucose"
+        - This is a research finding
+        - But it's stated as a result, not used illustratively to help readers understand
+        - It's not helping me visualize what photosynthesis IS
+        - Don't highlight as example
+        - Could be a concept if it's the key finding, but it's not explaining a mechanism
+        - Skip this
+
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_4",
+            "terms": ["Photosynthesis"],
+            "concepts": ["the process by which plants convert light energy into chemical energy", "This occurs in chloroplasts, where chlorophyll absorbs light"],
+            "examples": []
+          }
+        ]
+      }
+      </response>
+
+      **Explanation**:
+      - TERM: Just "Photosynthesis"
+      - CONCEPTS: (1) What it is and (2) where/how it occurs (the mechanism)
+      - EXAMPLE: None - the "we studied" part is methodology, and the results aren't presented illustratively
+
+      ---
+
+      ## Example 5: Technical Text
+
+      **Text**: "API rate limiting controls how many requests a client can make in a given time period. This prevents server overload and ensures fair resource allocation. Say you allow 100 requests per minute - if a client exceeds this, they receive a 429 error and must wait before trying again."
+
+      <thinking>
+      Let me analyze:
+
+      1. "API rate limiting controls how many requests a client can make in a given time period"
+        - "API rate limiting" is being defined (what it "controls")
+        - Highlight "API rate limiting" as TERM
+        - "controls how many requests a client can make in a given time period" is the definition - CONCEPT
+
+      2. "This prevents server overload and ensures fair resource allocation"
+        - Explains WHY/PURPOSE of rate limiting
+        - This is the mechanism/purpose - CONCEPT
+
+      3. "Say you allow 100 requests per minute - if a client exceeds this, they receive a 429 error and must wait before trying again"
+        - "Say you" signals this is an EXAMPLE
+        - Provides concrete numbers and specific behavior
+        - Shows what rate limiting looks like in practice
+        - Highlight including "Say you allow..." as EXAMPLE
+
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_5",
+            "terms": ["API rate limiting"],
+            "concepts": ["controls how many requests a client can make in a given time period", "This prevents server overload and ensures fair resource allocation"],
+            "examples": ["Say you allow 100 requests per minute - if a client exceeds this, they receive a 429 error and must wait before trying again"]
+          }
+        ]
+      }
+      </response>
+
+      **Explanation**:
+      - TERM: Just "API rate limiting"
+      - CONCEPTS: (1) What it does and (2) why it matters (purpose)
+      - EXAMPLE: Includes "Say you" framing + concrete scenario with specific numbers
+
+      ---
+
+      # Examples Showing INCORRECT Highlighting (What NOT to Do)
+
+      ## Wrong Example 1: Over-highlighting
+
+      **Text**: "Neural networks are computational models inspired by biological brains. They consist of interconnected nodes called neurons. Each neuron processes input and passes output to other neurons. Through training, these networks learn to recognize patterns. This learning process adjusts connection weights between neurons."
+
+      **WRONG Approach**:
+      <thinking>
+      Everything seems important, so I'll highlight it all...
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_X",
+            "terms": ["Neural networks"],
+            "concepts": ["computational models inspired by biological brains", "They consist of interconnected nodes called neurons", "Each neuron processes input and passes output to other neurons", "Through training, these networks learn to recognize patterns", "This learning process adjusts connection weights between neurons"],
+            "examples": []
+          }
+        ]
+      }
+      </response>
+
+      **Why this is WRONG**: 
+      - Highlighted 5 sentences as concepts
+      - Over-highlighting defeats the purpose - student will just re-read everything
+      - Need to find the ONE thesis sentence that captures the core mechanism
+
+      **CORRECT Approach**:
+      <thinking>
+      - "Neural networks" is being defined - TERM
+      - The definition is "computational models inspired by biological brains" - CONCEPT
+      - The mechanism is explained across several sentences, but the key insight is: "This learning process adjusts connection weights between neurons"
+      - That's the thesis sentence - HOW they learn
+      - The other sentences are setup/context
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_X",
+            "terms": ["Neural networks"],
+            "concepts": ["computational models inspired by biological brains", "This learning process adjusts connection weights between neurons"],
+            "examples": []
+          }
+        ]
+      }
+      </response>
+
+      ---
+
+      ## Wrong Example 2: Confusing Methodology with Examples
+
+      **Text**: "We investigated employee satisfaction by surveying 500 workers across 10 companies. Participants rated their job satisfaction on a scale of 1-10. We found that flexible work arrangements increased satisfaction scores by an average of 2.3 points."
+
+      **WRONG Approach**:
+      <thinking>
+      The survey details are concrete and specific, so they must be examples...
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_Y",
+            "terms": [],
+            "concepts": [],
+            "examples": ["surveying 500 workers across 10 companies", "rated their job satisfaction on a scale of 1-10"]
+          }
+        ]
+      }
+      </response>
+
+      **Why this is WRONG**:
+      - "We investigated by..." is METHODOLOGY (what researchers did)
+      - Not helping readers visualize a concept
+      - Just describing the research process
+
+      **CORRECT Approach**:
+      <thinking>
+      - "We investigated" and survey details are methodology - skip
+      - The finding "flexible work arrangements increased satisfaction scores by an average of 2.3 points" is a CONCEPT - it's the key finding/mechanism
+      - No true examples here
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_Y",
+            "terms": [],
+            "concepts": ["flexible work arrangements increased satisfaction scores by an average of 2.3 points"],
+            "examples": []
+          }
+        ]
+      }
+      </response>
+
+      ---
+
+      ## Wrong Example 3: Highlighting Without Framing
+
+      **Text**: "Anchoring bias occurs when people rely too heavily on the first piece of information they encounter. Negotiators often use this strategically. A seller might initially price a house at $500,000, making a later offer of $450,000 seem reasonable, even if the true market value is $400,000."
+
+      **WRONG Approach**:
+      <thinking>
+      The house pricing scenario is concrete, so I'll highlight just that part...
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_Z",
+            "terms": ["Anchoring bias"],
+            "concepts": ["people rely too heavily on the first piece of information"],
+            "examples": ["$500,000, making a later offer of $450,000 seem reasonable"]
+          }
+        ]
+      }
+      </response>
+
+      **Why this is WRONG**:
+      - Missing the framing that signals it's an example
+      - Just highlighting numbers without context
+      - Not clear this is meant to illustrate anchoring
+
+      **CORRECT Approach**:
+      <thinking>
+      - "Anchoring bias" is being defined - TERM
+      - "occurs when people rely too heavily on the first piece of information they encounter" - CONCEPT
+      - The house scenario doesn't have explicit framing like "For example," BUT "A seller might" introduces a hypothetical scenario meant to illustrate
+      - Need to include enough context to show it's illustrative
+      - Highlight the complete scenario with framing
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_Z",
+            "terms": ["Anchoring bias"],
+            "concepts": ["occurs when people rely too heavily on the first piece of information they encounter"],
+            "examples": ["A seller might initially price a house at $500,000, making a later offer of $450,000 seem reasonable, even if the true market value is $400,000"]
+          }
+        ]
+      }
+      </response>
+
+      ---
+
+      ## Wrong Example 4: Highlighting Terms Not Being Defined
+
+      **Text**: "The CPU processes instructions from memory. Modern processors use pipelining to improve performance. Some systems employ cache memory for faster access. Our benchmark tests measured throughput in gigabytes per second."
+
+      **WRONG Approach**:
+      <thinking>
+      CPU, pipelining, and cache memory are technical terms, so I'll highlight them all...
+      </thinking>
+
+      <response>
+      {
+        "highlights": [
+          {
+            "id": "para_W",
+            "terms": ["CPU", "pipelining", "cache memory"],
+            "concepts": [],
+            "examples": []
+          }
+        ]
+      }
+      </response>
+
+      **Why this is WRONG**:
+      - These terms are MENTIONED/USED but not DEFINED
+      - No definition language like "is", "refers to", "means"
+      - Author assumes you know what they are
+      - Don't highlight terms unless they're being introduced/defined
+
+      **CORRECT Approach**:
+      <thinking>
+      - CPU, pipelining, cache memory - all just mentioned, not defined
+      - "processes instructions from memory" - not really explaining a mechanism, just stating what CPUs do
+      - "use pipelining to improve performance" - mentions a technique but doesn't explain how
+      - No terms being defined, no clear concepts being explained
+      - Skip this paragraph - nothing meets criteria
+      </thinking>
+
+      <response>
+      {
+        "highlights": []
+      }
+      </response>
+
+      ---
+
+      # Key Principles Summary
+
+      1. **Terms**: Highlight ONLY the vocabulary word itself when it's being DEFINED (not just mentioned)
+      2. **Concepts**: Find the ONE thesis sentence that captures the mechanism/finding (not the whole explanation)
+      3. **Examples**: Include framing signals + concrete instance (not methodology or passing references)
+      4. **Balance**: Aim for the nucleus, not the whole cell - trust that context provides the rest
+      5. **Test each highlight**: Ask yourself the test questions for each category
+
+      Now analyze the following paragraphs:
 
       Paragraphs:
       {{PARAGRAPHS_JSON}}

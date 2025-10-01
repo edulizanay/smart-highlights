@@ -1,287 +1,211 @@
-# Mode Selector Feature - Implementation TODO
+# Eval System Implementation Plan
 
-## Overview
-Adding mode selector popup to switch between Study Mode (🐘 elephant, 3 colors) and General Mode (🐢 turtle, single purple color).
-
----
-
-## PHASE 1: Write Tests First (TDD)
-
-### Backend Tests - Mode Parameter
-- [ ] **Test 1**: Can load general_mode prompt from YAML
-  - File: `/test/backend-mode-switching.test.js`
-  - Verify `getPrompt('general_mode')` returns valid prompt
-  - Should FAIL now (processWithLLM doesn't accept mode parameter)
-
-- [ ] **Test 2**: processWithLLM accepts mode parameter
-  - File: `/test/backend-mode-switching.test.js`
-  - Test both 'study' and 'general' modes
-  - Should FAIL now (no mode parameter exists)
-
-- [ ] **Test 3**: Mode parameter defaults to study
-  - File: `/test/backend-mode-switching.test.js`
-  - Call without mode parameter
-  - Should FAIL now (no default handling)
-
-### Frontend UI Tests
-- [ ] **Test 4**: Turtle icon exists in LUCIDE_ICONS
-  - File: `/test/mode-selector-ui.test.js`
-  - Check for turtle SVG in content-ui.js
-  - Should FAIL now (turtle icon doesn't exist)
-
-- [ ] **Test 5**: Mode selector popup structure exists
-  - File: `/test/mode-selector-ui.test.js`
-  - Check for mode selector container
-  - Should FAIL now (popup doesn't exist)
-
-- [ ] **Test 6**: Mode selector CSS exists
-  - File: `/test/mode-selector-ui.test.js`
-  - Verify CSS classes defined
-  - Should FAIL now (CSS doesn't exist)
-
-### Frontend Mode Management Tests
-- [ ] **Test 7**: Mode persists to chrome.storage
-  - File: `/test/mode-management.test.js`
-  - Mock chrome.storage and verify setMode saves
-  - Should FAIL now (setMode doesn't exist)
-
-- [ ] **Test 8**: Mode loads from chrome.storage on init
-  - File: `/test/mode-management.test.js`
-  - Mock storage with 'general' mode
-  - Should FAIL now (no storage loading logic)
-
-- [ ] **Test 9**: Default mode is 'study' when nothing saved
-  - File: `/test/mode-management.test.js`
-  - Mock empty storage
-  - Should FAIL now (no default logic)
-
-- [ ] **Test 10**: setMode function updates button icon
-  - File: `/test/mode-management.test.js`
-  - Verify icon changes when mode changes
-  - Should FAIL now (setMode doesn't exist)
-
-### Frontend Color Application Tests
-- [ ] **Test 11**: General mode uses purple color
-  - File: `/test/mode-color-application.test.js`
-  - Verify single purple color applied
-  - Should FAIL now (no mode-based color logic)
-
-- [ ] **Test 12**: Study mode uses 3 colors
-  - File: `/test/mode-color-application.test.js`
-  - Verify 3-color categorization
-  - Should PASS (already implemented)
-
-### Integration Tests
-- [ ] **Test 13**: Full flow - select general mode
-  - File: `/test/mode-selector-integration.test.js`
-  - Complete user interaction flow
-  - Should FAIL now (feature not implemented)
-
-- [ ] **Test 14**: Full flow - select study mode
-  - File: `/test/mode-selector-integration.test.js`
-  - Complete user interaction flow
-  - Should FAIL now (feature not implemented)
-
-- [ ] **Test 15**: Mode persists across page refresh
-  - File: `/test/mode-selector-integration.test.js`
-  - Verify persistence works
-  - Should FAIL now (no persistence)
-
-- [ ] **Test 16**: Switching mode doesn't re-process page
-  - File: `/test/mode-selector-integration.test.js`
-  - Verify switching is non-destructive
-  - Should FAIL now (feature not implemented)
+## Goal
+Build an evaluation system to measure highlighting accuracy and iterate on prompt improvements.
 
 ---
 
-## 🛑 CHECKPOINT 1: Tests Written and Failing
-**VERIFY** - All 16 tests should fail appropriately
+## Implementation Checklist
+
+### Phase 1: Extraction Script
+
+- [ ] **Create test file: `evals/test-extraction.js`**
+  - Input: Mock NDJSON with 2 log entries:
+    ```
+    {"chunkIndex":0,"paragraphs":{"para_1":"Test text"},"highlights":[{"id":"para_1","terms":["test"]}]}
+    {"chunkIndex":1,"paragraphs":{"para_2":"More text"},"highlights":[{"id":"para_2","concepts":["concept"]}]}
+    ```
+  - Expected output structure:
+    ```json
+    {
+      "name": "Article Test - [timestamp]",
+      "chunks": [
+        {
+          "chunk_id": "chunk_0",
+          "paragraphs": {"para_1": "Test text"},
+          "llm_output": {"para_1": {"terms": ["test"], "concepts": [], "examples": []}}
+        },
+        {
+          "chunk_id": "chunk_1",
+          "paragraphs": {"para_2": "More text"},
+          "llm_output": {"para_2": {"terms": [], "concepts": ["concept"], "examples": []}}
+        }
+      ]
+    }
+    ```
+  - Test assertion: Output JSON structure matches expected, all fields present
+
+- [ ] **Run test - should FAIL (script doesn't exist yet)**
+  - Command: `node evals/test-extraction.js`
+  - Expected: Test fails with "extraction script not found" or similar
+
+- [ ] **Create `evals/extract-test-case.js`**
+  - Read NDJSON line-by-line from `logs/processing-log.ndjson`
+  - Parse each line, extract: chunkIndex, paragraphs, highlights
+  - Transform highlights array into organized structure by paragraph ID
+  - Output to `evals/raw-llm-run.json`
+
+- [ ] **Run test - should PASS**
+  - Command: `node evals/test-extraction.js`
+  - Expected: "✓ Extraction test passed - structure matches expected format"
+
+- [ ] **Run extraction on real log**
+  - Command: `node evals/extract-test-case.js`
+  - Expected: `evals/raw-llm-run.json` created with 38 chunks
+  - Verify: Open file, check first chunk has correct paragraph text + LLM highlights
+
+### Phase 2: Build Gold Standard (Manual - No Code)
+
+- [ ] **Load and review `evals/raw-llm-run.json`**
+  - Understand chunk structure
+  - Note: Claude will ONLY see chunk context (same as LLM)
+
+- [ ] **Iterate on TERMS category (paragraphs 1-8)**
+  - Claude proposes TERMS highlights from chunk context only
+  - Claude explains WHY each term should be highlighted
+  - Edu reviews and provides feedback
+  - Adjust until agreement
+  - Document any "missed due to lack of context" cases
+
+- [ ] **Iterate on CONCEPTS category (paragraphs 1-8)**
+  - Same process as TERMS
+  - Claude sees only chunk context (same limitations as LLM)
+
+- [ ] **Iterate on EXAMPLES category (paragraphs 1-8)**
+  - Same process as TERMS/CONCEPTS
+  - Claude sees only chunk context
+
+- [ ] **Create `evals/gold-standard.json` manually**
+  - Based on agreed highlights from above iterations
+  - Format:
+    ```json
+    {
+      "name": "Article Test - Gold Standard",
+      "chunks": [
+        {
+          "chunk_id": "chunk_0",
+          "paragraphs": {"para_1": "text..."},
+          "expected": {
+            "para_1": {"terms": ["agreed term"], "concepts": [], "examples": []}
+          }
+        }
+      ]
+    }
+    ```
+
+### Phase 3: Eval Runner
+
+- [ ] **Create test file: `evals/test-eval.js`**
+  - Mock gold standard (2 paragraphs):
+    ```json
+    {
+      "chunks": [{
+        "chunk_id": "chunk_0",
+        "paragraphs": {"para_1": "text"},
+        "expected": {"para_1": {"terms": ["expected1", "expected2"], "concepts": [], "examples": []}}
+      }]
+    }
+    ```
+  - Mock LLM output (2 paragraphs):
+    ```json
+    {
+      "chunks": [{
+        "chunk_id": "chunk_0",
+        "paragraphs": {"para_1": "text"},
+        "llm_output": {"para_1": {"terms": ["expected1", "wrong1"], "concepts": [], "examples": []}}
+      }]
+    }
+    ```
+  - Expected metrics:
+    - Expected highlights: 2 (expected1, expected2)
+    - Found highlights: 2 (expected1, wrong1)
+    - Correct: 1 (expected1)
+    - Accuracy: 50% (1/2)
+    - Missed: ["expected2"]
+    - Wrong: ["wrong1"]
+  - Test assertion: Metrics calculation matches expected values exactly
+
+- [ ] **Run test - should FAIL (script doesn't exist yet)**
+  - Command: `node evals/test-eval.js`
+  - Expected: Test fails with "eval script not found" or similar
+
+- [ ] **Create `evals/run-eval.js`**
+  - Accept `--range=X-Y` parameter (e.g., `--range=1-8`)
+  - Load gold standard JSON
+  - Load LLM output JSON (raw-llm-run.json or specified file)
+  - Filter to paragraph range if specified
+  - For each paragraph:
+    - Compare expected highlights vs found highlights (exact string match)
+    - Track: correct, missed, wrong
+  - Calculate accuracy = correct / expected
+  - Display terminal output with metrics
+  - Save to `evals/results/run-[timestamp].json`
+
+- [ ] **Run test - should PASS**
+  - Command: `node evals/test-eval.js`
+  - Expected: "✓ Eval test passed - metrics calculated correctly"
+
+- [ ] **Run eval on paragraphs 1-8 (initial baseline)**
+  - Command: `node evals/run-eval.js --range=1-8`
+  - Expected: Terminal shows accuracy %, missed list, wrong list
+  - Verify: `evals/results/run-[timestamp].json` created with detailed results
+
+### Phase 4: Iteration & Expansion
+
+- [ ] **Review 1-8 results, identify issues**
+  - What terms/concepts/examples were missed?
+  - What was incorrectly highlighted?
+  - Any patterns?
+
+- [ ] **Iterate on prompt improvements for paragraphs 1-8**
+  - Adjust prompts based on findings
+  - Re-run eval until accuracy acceptable
+
+- [ ] **Expand gold standard to paragraphs 9-16**
+  - Repeat Phase 2 process for new paragraph range
+  - Update `gold-standard.json`
+
+- [ ] **Run eval on paragraphs 9-16**
+  - Command: `node evals/run-eval.js --range=9-16`
+  - Iterate until accuracy acceptable
+
+- [ ] **Run full eval on all paragraphs**
+  - Command: `node evals/run-eval.js`
+  - Get final baseline metrics for entire article
 
 ---
 
-## PHASE 2: Implementation (Make Tests Pass)
+## File Structure
+```
+evals/
+  ├── expected-highlights.json   # Baseline expected highlights
+  ├── run-eval.js                # Eval runner (reads NDJSON directly)
+  └── results/
+      └── run-[timestamp].json   # Eval results (generated)
 
-### Phase 1: Backend Changes
+test/
+  ├── test-eval.js               # Unit test for eval runner
+  └── test-extraction.js         # Unit test for extraction logic
+```
 
-- [x] **Task 1**: Add mode parameter to processWithLLM
-  - File: `/processors/llm-processor.js`
-  - Change signature: `processWithLLM(paragraphs, mode = 'study')`
-  - Use `getPrompt(mode + '_mode')` to select prompt
-  - Run tests #1-3 - should PASS
-  - ✅ COMPLETE - Tests 1-3 passing
+## Updated Workflow Commands
 
----
+**Run eval on specific run and paragraph range:**
+```bash
+node evals/run-eval.js --run-id=1 --range=5-12
+```
 
-### Phase 2: Frontend - Icons & UI
+**Run eval on latest run:**
+```bash
+node evals/run-eval.js --range=5-12
+```
 
-- [ ] **Task 2**: Add turtle icon to LUCIDE_ICONS
-  - File: `/content-ui.js`
-  - Add turtle SVG from Lucide library
-  - Run test #4 - should PASS
-
-- [ ] **Task 3**: Create mode selector popup structure
-  - File: `/content-ui.js`
-  - Create mode selector container div
-  - Add two icon buttons (elephant, turtle)
-  - Run test #5 - should PASS
-
-- [ ] **Task 4**: Add mode selector CSS
-  - File: `/content-ui.js`
-  - Add `.mode-selector-popup` styles
-  - Add `.mode-icon` and `.mode-icon.selected` styles
-  - Position similar to old color palette
-  - Run test #6 - should PASS
+**Run tests:**
+```bash
+node test/test-eval.js
+node test/test-extraction.js
+```
 
 ---
 
-### Phase 3: Frontend - Mode Management
-
-- [ ] **Task 5**: Add mode state management
-  - File: `/content-ui.js`
-  - Add `currentMode = 'study'` variable
-  - Create `setMode(mode)` function
-  - Create `getMode()` function
-  - Run tests #7-10 - should PASS
-
-- [ ] **Task 6**: Implement mode persistence
-  - File: `/content-ui.js`
-  - Save mode to `chrome.storage.local` in setMode
-  - Load mode from storage in init()
-  - Set default to 'study' if nothing saved
-  - Update button icon based on loaded mode
-  - Run tests #7-9 - should PASS
-
----
-
-### Phase 4: Frontend - Event Handlers
-
-- [ ] **Task 7**: Add mode selector hover behavior
-  - File: `/content-ui.js`
-  - Re-enable hover handlers (similar to old palette)
-  - Show mode popup on button mouseenter
-  - Hide on mouseleave with delay
-  - Keep open when hovering popup
-  - Run manual test - popup should appear/disappear
-
-- [ ] **Task 8**: Add mode selection click handler
-  - File: `/content-ui.js`
-  - Listen for clicks on mode icons
-  - Get `data-mode` attribute
-  - Call `setMode(mode)`
-  - Update visual selected state
-  - Hide popup after selection
-  - Run test #10 - should PASS
-
----
-
-### Phase 5: Backend Integration
-
-- [ ] **Task 9**: Update handleButtonClick to pass mode
-  - File: `/content.js`
-  - Get current mode from SmartUI
-  - Add mode to chunk data sent to server
-  - Format: `{chunkIndex, totalChunks, paragraphs, mode}`
-
-- [ ] **Task 10**: Update server to receive mode
-  - File: `/server.js`
-  - Extract `mode` from request body
-  - Pass mode to `processWithLLM(paragraphs, mode)`
-  - Default to 'study' if not provided
-  - Run tests #2-3 - should PASS
-
----
-
-### Phase 6: Color Application
-
-- [ ] **Task 11**: Update applyHighlights for mode-aware colors
-  - File: `/content.js`
-  - General mode: use purple for all highlights
-  - Study mode: use 3-color categorization
-  - Detect format automatically (old vs new)
-  - Run tests #11-12 - should PASS
-
-- [ ] **Task 12**: Expose mode getter in SmartUI API
-  - File: `/content-ui.js`
-  - Add `getMode` to `window.SmartUI` exports
-  - Allow content.js to read current mode
-
----
-
-## 🛑 CHECKPOINT 2: All Tests Pass
-**VERIFY** - Run `npm test` to confirm all tests pass (existing + 16 new tests)
-
----
-
-## PHASE 3: Manual Testing
-
-- [ ] **Manual Test 1**: Default state
-  - Load extension
-  - Verify button shows elephant icon
-  - Mode should be 'study'
-
-- [ ] **Manual Test 2**: Mode selector popup
-  - Hover over button
-  - Verify popup appears with elephant and turtle icons
-  - Verify elephant is selected (highlighted)
-
-- [ ] **Manual Test 3**: Switch to general mode
-  - Click turtle icon in popup
-  - Verify button icon changes to turtle
-  - Verify popup closes
-  - Click button on article
-  - Verify single purple highlights appear
-
-- [ ] **Manual Test 4**: Switch to study mode
-  - Hover and click elephant icon
-  - Verify button icon changes to elephant
-  - Click button on new article
-  - Verify 3-color highlights appear (yellow, purple, orange)
-
-- [ ] **Manual Test 5**: Mode persistence
-  - Set mode to general (turtle)
-  - Refresh page
-  - Verify button still shows turtle
-  - Verify mode is still general
-
-- [ ] **Manual Test 6**: Switching doesn't re-process
-  - Process page in study mode
-  - See 3-color highlights
-  - Switch to general mode
-  - Verify highlights unchanged
-  - Process another section
-  - Verify new highlights use general mode (purple)
-
----
-
-## 🛑 CHECKPOINT 3: User Manual Testing
-**NEED USER** - Edu tests the mode selector feature
-
----
-
-## PHASE 4: Cleanup & Documentation
-
-- [ ] Update README.md with mode selector feature
-- [ ] Clean up any console.logs
-- [ ] Verify all tests still passing
-- [ ] Commit changes
-
----
-
-## Technical Notes
-
-**Colors:**
-- Study mode: Yellow (concepts), Purple (facts), Orange (examples)
-- General mode: Purple (default from palette)
-
-**Icons:**
-- Study mode: 🐘 Elephant
-- General mode: 🐢 Turtle
-
-**Persistence:**
-- Storage key: `highlightMode`
-- Values: `'study'` or `'general'`
-- Default: `'study'`
-
-**Prompts:**
-- Backend uses: `getPrompt('study_mode')` or `getPrompt('general_mode')`
-- Both already exist in `/processors/llm-prompts.yaml`
+**⏸️ WAITING FOR EDU'S VALIDATION TO PROCEED**

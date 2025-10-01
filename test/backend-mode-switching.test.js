@@ -3,7 +3,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { getPrompt } = require('../processors/prompt-loader');
+const { getPrompt } = require('../processors/llm-processor');
 
 test('Test 1: Can load general_mode prompt from YAML', () => {
   const generalPrompt = getPrompt('general_mode');
