@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-10-02T05:00:02.887Z",
+  "range": {
+    "start": 26,
+    "end": 26
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 1,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion"
+        ],
+        "wrong": [
+          "This demonstrates both planning ability and adaptive flexibility—Claude can modify its approach when the intended outcome changes"
+        ]
+      },
+      "examples": {
+        "expected": 2,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "it writes a new one ending in \"habit\"",
+          "causing Claude to write a sensible (but no-longer rhyming) line which ends in \"green\""
+        ],
+        "wrong": [
+          "inspired by how neuroscientists study brain function, by pinpointing and altering neural activity in specific parts of the brain (for example using electrical or magnetic currents)",
+          "Here, we modified the part of Claude’s internal state that represented the \"rabbit\" concept. When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion. We can also inject the concept of \"green\" at that point, causing Claude to write a sensible (but no-longer rhyming) line which ends in \"green\""
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 3,
+      "totalCorrect": 0,
+      "accuracy": 0
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 0,
+          "llm": 0,
+          "diff": 0,
+          "percentDiff": 0
+        },
+        "concepts": {
+          "expected": 141,
+          "llm": 129,
+          "diff": -12,
+          "percentDiff": -8.51
+        },
+        "examples": {
+          "expected": 122,
+          "llm": 558,
+          "diff": 436,
+          "percentDiff": 357.38
+        }
+      },
+      "total": {
+        "expected": 263,
+        "llm": 687,
+        "diff": 424,
+        "percentDiff": 161.22
+      }
+    }
+  }
+}

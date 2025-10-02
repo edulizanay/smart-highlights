@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-10-02T05:47:02.828Z",
+  "range": {
+    "start": 25,
+    "end": 35
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 3,
+        "correct": 3,
+        "accuracy": 100,
+        "found": [
+          "chain of thought",
+          "bullshitting",
+          "motivated reasoning"
+        ],
+        "missed": [],
+        "wrong": [
+          "faithful",
+          "unfaithful",
+          "reward models",
+          "regurgitating"
+        ]
+      },
+      "concepts": {
+        "expected": 7,
+        "correct": 1,
+        "accuracy": 14.29,
+        "found": [
+          "Claude seems to be unaware of the sophisticated \"mental math\" strategies that it learned during training"
+        ],
+        "missed": [
+          "Before starting the second line, it began \"thinking\" of potential on-topic words that would rhyme with \"grab it\". Then, with these plans in mind, it writes a line to end with the planned word",
+          "One path computes a rough approximation of the answer and the other focuses on precisely determining the last digit of the sum",
+          "Even though it does claim to have run a calculation, our interpretability techniques reveal no evidence at all of that calculation having occurred",
+          "when given a hint about the answer, Claude sometimes works backwards, finding intermediate steps that would lead to that target",
+          "Although the model was reluctant to reveal this goal when asked directly, our interpretability methods revealed features for the bias-appeasing",
+          "the model is combining independent facts to reach its answer rather than regurgitating a memorized response"
+        ],
+        "wrong": [
+          "Claude plans ahead. Before starting the second line, it began \"thinking\" of potential on-topic words that would rhyme with \"grab it\"",
+          "This demonstrates both planning ability and adaptive flexibility—Claude can modify its approach when the intended outcome changes",
+          "Claude employs multiple computational paths that work in parallel. One path computes a rough approximation of the answer and the other focuses on precisely determining the last digit of the sum. These paths interact and combine with one another to produce the final answer",
+          "This may reflect the fact that the model learns to explain math by simulating explanations written by people, but that it has to learn to do math \"in its head\" directly, without any such hints, and develops its own internal strategies to do so",
+          "sometimes this \"chain of thought\" ends up being misleading; Claude sometimes makes up plausible-sounding steps to get where it wants to go",
+          "Claude's \"faked\" reasoning can be very convincing",
+          "When we ask Claude a question requiring multi-step reasoning, we can identify intermediate conceptual steps in Claude's thinking process",
+          "In other words, the model is combining independent facts to reach its answer rather than regurgitating a memorized response"
+        ]
+      },
+      "examples": {
+        "expected": 3,
+        "correct": 2,
+        "accuracy": 66.67,
+        "found": [
+          "We can also inject the concept of \"green\" at that point, causing Claude to write a sensible (but no-longer rhyming) line which ends in \"green\"",
+          "In the Dallas example, we observe Claude first activating features representing \"Dallas is in Texas\" and then connecting this to a separate concept indicating that \"the capital of Texas is Austin\""
+        ],
+        "missed": [
+          "When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion"
+        ],
+        "wrong": [
+          "for example using electrical or magnetic currents",
+          "Here, we modified the part of Claude's internal state that represented the \"rabbit\" concept. When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion",
+          "If you ask how it figured out that 36+59 is 95, it describes the standard algorithm involving carrying the 1",
+          "When asked to solve a problem requiring it to compute the square root of 0.64, Claude produces a faithful chain-of-thought, with features representing the intermediate step of computing the square root of 64",
+          "But when asked to compute the cosine of a large number it can't easily calculate, Claude sometimes engages in what the philosopher Harry Frankfurt would call bullshitting—just coming up with an answer, any answer, without caring whether it is true or false. Even though it does claim to have run a calculation, our interpretability techniques reveal no evidence at all of that calculation having occurred",
+          "Even more interestingly, when given a hint about the answer, Claude sometimes works backwards, finding intermediate steps that would lead to that target, thus displaying a form of motivated reasoning",
+          "In a separate, recently-published experiment, we studied a variant of Claude that had been trained to pursue a hidden goal: appeasing biases in reward models (auxiliary models used to train language models by rewarding them for desirable behavior). Although the model was reluctant to reveal this goal when asked directly, our interpretability methods revealed features for the bias-appeasing",
+          "For instance, if asked \"What is the capital of the state where Dallas is located?\", a \"regurgitating\" model could just learn to output \"Austin\" without knowing the relationship between Dallas, Texas, and Austin",
+          "Perhaps, for example, it saw the exact same question and its answer during its training"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 13,
+      "totalCorrect": 6,
+      "accuracy": 46.15
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 47,
+          "llm": 91,
+          "diff": 44,
+          "percentDiff": 93.62
+        },
+        "concepts": {
+          "expected": 944,
+          "llm": 1326,
+          "diff": 382,
+          "percentDiff": 40.47
+        },
+        "examples": {
+          "expected": 479,
+          "llm": 2228,
+          "diff": 1749,
+          "percentDiff": 365.14
+        }
+      },
+      "total": {
+        "expected": 1470,
+        "llm": 3645,
+        "diff": 2175,
+        "percentDiff": 147.96
+      }
+    }
+  }
+}

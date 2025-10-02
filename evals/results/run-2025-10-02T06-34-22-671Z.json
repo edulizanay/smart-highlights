@@ -1,0 +1,91 @@
+{
+  "timestamp": "2025-10-02T06:34:22.671Z",
+  "mode": "study",
+  "range": {
+    "start": 9,
+    "end": 15
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 5,
+        "correct": 5,
+        "accuracy": 100,
+        "found": [
+          "AI microscope",
+          "AI biology",
+          "features",
+          "circuits",
+          "language of thought"
+        ],
+        "missed": [],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 2,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "So we look inside",
+          "We are able to \"catch it in the act\" as it makes up its fake reasoning"
+        ],
+        "wrong": [
+          "There are limits to what you can learn just by talking to an AI model—after all, humans (even neuroscientists) don't know all the details of how our own brains work",
+          "Claude sometimes thinks in a conceptual space that is shared between languages, suggesting it has a kind of universal \"language of thought.\"",
+          "Claude will plan what it will say many words ahead, and write to get to that destination",
+          "even though models are trained to output one word at a time, they may think on much longer horizons to do so",
+          "Claude, on occasion, will give a plausible-sounding argument designed to agree with the user rather than to follow logical steps",
+          "Claude's default behavior is to decline to speculate when asked a question, and it only answers questions when something inhibits this default reluctance",
+          "the general \"build a microscope\" approach lets us learn many things we wouldn't have guessed going in"
+        ]
+      },
+      "examples": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "We show this in the realm of poetry, where it thinks of possible rhyming words in advance and writes the next line to get there",
+          "In the poetry case study, we had set out to show that the model didn't plan ahead, and found instead that it did",
+          "In a study of hallucinations, we found the counter-intuitive result that Claude's default behavior is to decline to speculate when asked a question, and it only answers questions when something inhibits this default reluctance",
+          "In a response to an example jailbreak, we found that the model recognized it had been asked for dangerous information well before it was able to gracefully bring the conversation back around"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 7,
+      "totalCorrect": 5,
+      "accuracy": 71.43
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 58,
+          "llm": 58,
+          "diff": 0,
+          "percentDiff": 0
+        },
+        "concepts": {
+          "expected": 87,
+          "llm": 882,
+          "diff": 795,
+          "percentDiff": 913.79
+        },
+        "examples": {
+          "expected": 0,
+          "llm": 655,
+          "diff": 655,
+          "percentDiff": 0
+        }
+      },
+      "total": {
+        "expected": 145,
+        "llm": 1595,
+        "diff": 1450,
+        "percentDiff": 1000
+      }
+    }
+  }
+}

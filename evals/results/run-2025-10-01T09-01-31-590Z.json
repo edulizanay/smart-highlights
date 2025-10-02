@@ -1,0 +1,61 @@
+{
+  "timestamp": "2025-10-01T09:01:31.590Z",
+  "range": {
+    "start": 5,
+    "end": 12
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 5,
+        "correct": 5,
+        "accuracy": 100,
+        "found": [
+          "AI microscope",
+          "AI biology",
+          "features",
+          "circuits",
+          "language of thought"
+        ],
+        "missed": [],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 2,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "This means that we don't understand how models do most of the things they do",
+          "So we look inside"
+        ],
+        "wrong": [
+          "they learn their own strategies to solve problems",
+          "This means that we don’t understand how models do most of the things they do",
+          "Knowing how models like Claude think would allow us to have a better understanding of their abilities, as well as help us ensure that they’re doing what we intend them to",
+          "We take inspiration from the field of neuroscience, which has long studied the messy insides of thinking organisms, and try to build a kind of AI microscope that will let us identify patterns of activity and flows of information",
+          "we extend our prior work locating interpretable concepts (\"features\") inside a model to link those concepts together into computational \"circuits\", revealing parts of the pathway that transforms the words that go into Claude into the words that come out",
+          "Our method sheds light on a part of what happens when Claude responds to these prompts, which is enough to see solid evidence that",
+          "Claude sometimes thinks in a conceptual space that is shared between languages, suggesting it has a kind of universal “language of thought.”"
+        ]
+      },
+      "examples": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "Claude can speak dozens of languages. What language, if any, is it using \"in its head\"",
+          "Claude writes text one word at a time. Is it only focusing on predicting the next word or does it ever plan ahead",
+          "Claude can write out its reasoning step-by-step. Does this explanation represent the actual steps it took to get to an answer, or is it sometimes fabricating a plausible argument for a foregone conclusion"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 7,
+      "totalCorrect": 5,
+      "accuracy": 71.43
+    }
+  }
+}

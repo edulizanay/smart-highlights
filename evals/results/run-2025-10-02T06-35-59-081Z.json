@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-10-02T06:35:59.082Z",
+  "mode": "study",
+  "range": {
+    "start": 10,
+    "end": 10
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 1,
+        "correct": 1,
+        "accuracy": 100,
+        "found": [
+          "AI microscope"
+        ],
+        "missed": [],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 1,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "So we look inside"
+        ],
+        "wrong": [
+          "We take inspiration from the field of neuroscience, which has long studied the messy insides of thinking organisms, and try to build a kind of AI microscope that will let us identify patterns of activity and flows of information",
+          "There are limits to what you can learn just by talking to an AI model"
+        ]
+      },
+      "examples": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "after all, humans (even neuroscientists) don't know all the details of how our own brains work"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 2,
+      "totalCorrect": 1,
+      "accuracy": 50
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 13,
+          "llm": 13,
+          "diff": 0,
+          "percentDiff": 0
+        },
+        "concepts": {
+          "expected": 17,
+          "llm": 297,
+          "diff": 280,
+          "percentDiff": 1647.06
+        },
+        "examples": {
+          "expected": 0,
+          "llm": 94,
+          "diff": 94,
+          "percentDiff": 0
+        }
+      },
+      "total": {
+        "expected": 30,
+        "llm": 404,
+        "diff": 374,
+        "percentDiff": 1246.67
+      }
+    }
+  }
+}

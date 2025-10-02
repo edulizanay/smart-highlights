@@ -1,0 +1,63 @@
+{
+  "timestamp": "2025-10-02T06:34:43.837Z",
+  "mode": "general",
+  "range": {
+    "start": 9,
+    "end": 15
+  },
+  "metrics": {
+    "categories": {
+      "phrases": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "reasoning step-by-step",
+          "actual steps",
+          "fabricating a plausible argument",
+          "inspiration from the field of neuroscience",
+          "AI microscope",
+          "look inside",
+          "two new papers",
+          "computational \"circuits\"",
+          "Claude 3.5 Haiku",
+          "conceptual space that is shared between languages",
+          "universal \"language of thought\"",
+          "translating simple sentences",
+          "plan what it will say many words ahead",
+          "thinks of possible rhyming words in advance",
+          "think on much longer horizons",
+          "plausible-sounding argument designed to agree with the user",
+          "fake reasoning",
+          "incorrect hint",
+          "didn't plan ahead, and found instead that it did",
+          "default behavior is to decline to speculate",
+          "build a microscope\" approach"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 0,
+      "totalCorrect": 0,
+      "accuracy": 0
+    },
+    "charCounts": {
+      "byCategory": {
+        "phrases": {
+          "expected": 0,
+          "llm": 610,
+          "diff": 610,
+          "percentDiff": 0
+        }
+      },
+      "total": {
+        "expected": 0,
+        "llm": 610,
+        "diff": 610,
+        "percentDiff": 0
+      }
+    }
+  }
+}

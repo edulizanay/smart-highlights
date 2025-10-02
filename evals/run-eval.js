@@ -7,9 +7,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { processWithLLM } = require('../processors/llm-processor');
+const { processWithLLM, getCategories } = require('../processors/llm-processor');
 const { logChunkProcessing } = require('../utils/logger');
-const { loadModeConfig } = require('../processors/config-loader');
 
 /**
  * Normalize text by removing trailing punctuation and normalizing quotes for comparison
@@ -435,9 +434,8 @@ if (require.main === module) {
     try {
       const { range, runId, expectedHighlightsPath, mode } = parseArgs();
 
-      // Load mode configuration
-      const modeConfig = loadModeConfig(mode);
-      const categories = modeConfig.categories;
+      // Load categories for the mode
+      const categories = getCategories(mode);
 
       console.log('Loading data...');
       console.log(`  Mode: ${mode}`);

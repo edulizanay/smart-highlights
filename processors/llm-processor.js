@@ -66,6 +66,31 @@ function getModel(mode) {
 }
 
 /**
+ * Get categories for a specific mode
+ * @param {string} mode - The mode name (e.g., 'study', 'general')
+ * @returns {Array<string>} Array of categories for this mode
+ */
+function getCategories(mode) {
+  const prompts = loadPrompts();
+  const modeKey = `${mode}_mode`;
+
+  if (!prompts.prompts || !prompts.prompts[modeKey]) {
+    const availableModes = Object.keys(prompts.prompts || {})
+      .map(k => k.replace('_mode', ''))
+      .join(', ');
+    throw new Error(`Unknown mode: ${mode}. Available modes: ${availableModes}`);
+  }
+
+  const categories = prompts.prompts[modeKey].categories;
+
+  if (!categories || !Array.isArray(categories)) {
+    throw new Error(`Mode '${mode}' missing 'categories' array in llm-prompts.yaml`);
+  }
+
+  return categories;
+}
+
+/**
  * Extract content from response tags in LLM output
  */
 function extractResponseContent(llmContent) {
@@ -166,5 +191,6 @@ module.exports = {
   loadPrompts,
   getPrompt,
   fillTemplate,
-  getModel
+  getModel,
+  getCategories
 };

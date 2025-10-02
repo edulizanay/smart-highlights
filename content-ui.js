@@ -203,6 +203,7 @@
     const floatingButton = document.createElement('button');
     floatingButton.className = 'smart-highlights-button';
     floatingButton.title = '';
+
     const colorPicker = document.createElement('div');
     colorPicker.className = 'color-picker-popup';
 

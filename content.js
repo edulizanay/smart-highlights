@@ -5,7 +5,7 @@
 // Configuration constants
 const CONFIG = {
   HIGHLIGHT_DELAY_MS: 400,
-  CHUNK_MAX_CHARS: 500,
+  CHUNK_MAX_CHARS: 1000,
   DOM_READY_DELAY_MS: 500,
   MIN_PARAGRAPHS_FOR_BUTTON: 4,
   MIN_TEXT_LENGTH: 30,
@@ -62,14 +62,14 @@ function applyHighlights(highlightsData, options = {}) {
 
       if (!phraseData) return;
 
-      // Handle new format: {concepts: [], facts: [], examples: []}
+      // Handle new format: {concepts: [], terms: [], examples: []}
       if (phraseData.concepts) {
         phraseData.concepts.forEach(phrase => {
           allHighlights.push({ element, phrase, colorClass: 'smart-highlight-concept' });
         });
       }
-      if (phraseData.facts) {
-        phraseData.facts.forEach(phrase => {
+      if (phraseData.terms) {
+        phraseData.terms.forEach(phrase => {
           allHighlights.push({ element, phrase, colorClass: 'smart-highlight-fact' });
         });
       }
@@ -111,15 +111,15 @@ function applyHighlights(highlightsData, options = {}) {
 
       let modifiedHtml = element.innerHTML;
 
-      // Handle new format: {concepts: [], facts: [], examples: []}
+      // Handle new format: {concepts: [], terms: [], examples: []}
       if (phraseData.concepts) {
         phraseData.concepts.forEach(phrase => {
           modifiedHtml = applyPhrase({ innerHTML: modifiedHtml }, phrase, 'smart-highlight-concept');
           totalHighlights++;
         });
       }
-      if (phraseData.facts) {
-        phraseData.facts.forEach(phrase => {
+      if (phraseData.terms) {
+        phraseData.terms.forEach(phrase => {
           modifiedHtml = applyPhrase({ innerHTML: modifiedHtml }, phrase, 'smart-highlight-fact');
           totalHighlights++;
         });
@@ -243,13 +243,14 @@ setTimeout(() => {
 }, CONFIG.DOM_READY_DELAY_MS);
 
 // Process chunks with limited concurrency to maintain order and avoid API flooding
-async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2, mode = 'study') {
+async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2, mode = 'study', runId = null) {
   let index = 0;
 
   // Process a single chunk and return its identity with the result
   const processChunk = async (chunk) => {
     try {
-      const response = await fetch(CONFIG.API_ENDPOINT, {
+      const url = runId ? `${CONFIG.API_ENDPOINT}?run_id=${runId}` : CONFIG.API_ENDPOINT;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -317,11 +318,31 @@ async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent =
   }
 }
 
+// Extract paragraphs from already-tagged DOM elements (p, li only)
+function extractParagraphs() {
+  const taggedElements = document.querySelectorAll('[data-highlight-id]');
+  const extractedData = {};
+
+  taggedElements.forEach(element => {
+    const id = element.getAttribute('data-highlight-id');
+    const text = element.textContent.trim();
+    if (text.length > CONFIG.MIN_TEXT_LENGTH) {
+      extractedData[id] = text;
+    }
+  });
+
+  return extractedData;
+}
+
 async function handleButtonClick() {
   if (isProcessing) return;
   isProcessing = true;
 
   console.time('Total Processing');
+
+  // Generate unique run_id for this highlighting session
+  const runId = Date.now();
+  console.log(`Starting new run: ${runId}`);
 
   // Get current mode from UI
   const currentMode = SmartUI.getMode();
@@ -331,17 +352,8 @@ async function handleButtonClick() {
   SmartUI.setButtonIcon('loader', true);
 
   try {
-    // Use the already-tagged elements from page load
-    const taggedElements = document.querySelectorAll('[data-highlight-id]');
-    const extractedData = {};
-
-    taggedElements.forEach(element => {
-      const id = element.getAttribute('data-highlight-id');
-      const text = element.textContent.trim();
-      if (text.length > CONFIG.MIN_TEXT_LENGTH) {
-        extractedData[id] = text;
-      }
-    });
+    // Extract paragraphs using reusable function
+    const extractedData = extractParagraphs();
 
     // Chunk the data for parallel processing
     const chunks = chunkParagraphs(extractedData, CONFIG.CHUNK_MAX_CHARS);
@@ -386,7 +398,7 @@ async function handleButtonClick() {
     console.time('Concurrent Processing');
 
     // Process chunks with limited concurrency
-    await processConcurrentChunks(chunks, handleChunkResponse, CONFIG.MAX_CONCURRENT_REQUESTS, currentMode);
+    await processConcurrentChunks(chunks, handleChunkResponse, CONFIG.MAX_CONCURRENT_REQUESTS, currentMode, runId);
 
     console.timeEnd('Concurrent Processing');
 

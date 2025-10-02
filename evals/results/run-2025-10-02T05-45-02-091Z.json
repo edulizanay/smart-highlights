@@ -1,0 +1,75 @@
+{
+  "timestamp": "2025-10-02T05:45:02.091Z",
+  "range": {
+    "start": 26,
+    "end": 26
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "This demonstrates both planning ability and adaptive flexibility—Claude can modify its approach when the intended outcome changes"
+        ]
+      },
+      "examples": {
+        "expected": 2,
+        "correct": 2,
+        "accuracy": 100,
+        "found": [
+          "When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion",
+          "We can also inject the concept of \"green\" at that point, causing Claude to write a sensible (but no-longer rhyming) line which ends in \"green\""
+        ],
+        "missed": [],
+        "wrong": [
+          "(for example using electrical or magnetic currents)"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 2,
+      "totalCorrect": 2,
+      "accuracy": 100
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 0,
+          "llm": 0,
+          "diff": 0,
+          "percentDiff": 0
+        },
+        "concepts": {
+          "expected": 0,
+          "llm": 129,
+          "diff": 129,
+          "percentDiff": 0
+        },
+        "examples": {
+          "expected": 283,
+          "llm": 334,
+          "diff": 51,
+          "percentDiff": 18.02
+        }
+      },
+      "total": {
+        "expected": 283,
+        "llm": 463,
+        "diff": 180,
+        "percentDiff": 63.6
+      }
+    }
+  }
+}

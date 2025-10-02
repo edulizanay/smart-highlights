@@ -1,0 +1,93 @@
+{
+  "timestamp": "2025-10-02T05:02:01.240Z",
+  "range": {
+    "start": 35,
+    "end": 39
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 1,
+        "correct": 1,
+        "accuracy": 100,
+        "found": [
+          "hallucinate"
+        ],
+        "missed": [],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 4,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "the model is combining independent facts to reach its answer rather than regurgitating a memorized response",
+          "when we do so, the model's output changes from \"Austin\" to \"Sacramento.\"",
+          "refusal to answer is the default behavior: we find a circuit that is \"on\" by default",
+          "a competing feature representing \"known entities\" activates and inhibits this default circuit"
+        ],
+        "wrong": [
+          "In other words, the model is combining independent facts to reach its answer rather than regurgitating a memorized response",
+          "This indicates that the model is using the intermediate step to determine its answer",
+          "At a basic level, language model training incentivizes hallucination: models are always supposed to give a guess for the next word",
+          "Models like Claude have relatively successful (though imperfect) anti-hallucination training; they will often refuse to answer a question if they don’t know the answer, rather than speculate",
+          "It turns out that, in Claude, refusal to answer is the default behavior: we find a circuit that is \"on\" by default and that causes the model to state that it has insufficient information to answer any given question"
+        ]
+      },
+      "examples": {
+        "expected": 5,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "\"Dallas is in Texas\" and then connecting this to a separate concept indicating that \"the capital of Texas is Austin\"",
+          "changes from \"Austin\" to \"Sacramento.\"",
+          "say, the basketball player Michael Jordan",
+          "an unknown entity (\"Michael Batkin\")",
+          "Michael Batkin plays chess"
+        ],
+        "wrong": [
+          "In the Dallas example, we observe Claude first activating features representing \"Dallas is in Texas\" and then connecting this to a separate concept indicating that “the capital of Texas is Austin”",
+          "For instance, in the above example we can intervene and swap the \"Texas\" concepts for \"California\" concepts; when we do so, the model's output changes from \"Austin\" to \"Sacramento\"",
+          "However, when the model is asked about something it knows well—say, the basketball player Michael Jordan—a competing feature representing \"known entities\" activates and inhibits this default circuit (see also this recent paper for related findings)",
+          "In contrast, when asked about an unknown entity (\"Michael Batkin\"), it declines to answer",
+          "By intervening in the model and activating the \"known answer\" features (or inhibiting the \"unknown name\" or \"can’t answer\" features), we’re able to cause the model to hallucinate (quite consistently!) that Michael Batkin plays chess"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 10,
+      "totalCorrect": 1,
+      "accuracy": 10
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 11,
+          "llm": 11,
+          "diff": 0,
+          "percentDiff": 0
+        },
+        "concepts": {
+          "expected": 356,
+          "llm": 742,
+          "diff": 386,
+          "percentDiff": 108.43
+        },
+        "examples": {
+          "expected": 257,
+          "llm": 945,
+          "diff": 688,
+          "percentDiff": 267.7
+        }
+      },
+      "total": {
+        "expected": 624,
+        "llm": 1698,
+        "diff": 1074,
+        "percentDiff": 172.12
+      }
+    }
+  }
+}
