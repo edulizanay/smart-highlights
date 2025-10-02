@@ -8,7 +8,8 @@
         "concepts": [
           "This means that we don't understand how models do most of the things they do."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_6": {
@@ -16,7 +17,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_7": {
@@ -24,7 +26,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_8": {
@@ -32,7 +35,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_9": {
@@ -40,7 +44,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_10": {
@@ -52,7 +57,8 @@
         "concepts": [
           "So we look inside."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_11": {
@@ -64,7 +70,8 @@
           "circuits"
         ],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_12": {
@@ -74,7 +81,8 @@
           "language of thought"
         ],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_13": {
@@ -82,7 +90,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_14": {
@@ -92,7 +101,8 @@
         "concepts": [
           "We are able to \"catch it in the act\" as it makes up its fake reasoning"
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_15": {
@@ -100,7 +110,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_16": {
@@ -108,7 +119,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_17": {
@@ -118,7 +130,8 @@
         "concepts": [
           "our method only captures a fraction of the total computation performed by Claude"
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_18": {
@@ -126,7 +139,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_19": {
@@ -134,7 +148,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_20": {
@@ -142,7 +157,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_21": {
@@ -152,7 +168,8 @@
         "concepts": [
           "the same core features for the concepts of smallness and oppositeness activate, and trigger a concept of largeness, which gets translated out into the language of the question"
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_22": {
@@ -162,7 +179,8 @@
         "concepts": [
           "Claude can learn something in one language and apply that knowledge when speaking another."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_23": {
@@ -170,7 +188,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_24": {
@@ -178,7 +197,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_25": {
@@ -186,22 +206,22 @@
       "expected": {
         "terms": [],
         "concepts": [
-          "Before starting the second line, it began \"thinking\" of potential on-topic words that would rhyme with \"grab it\". Then, with these plans in mind, it writes a line to end with the planned word."
+          "Claude plans ahead."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_26": {
       "text": "To understand how this planning mechanism works in practice, we conducted an experiment inspired by how neuroscientists study brain function, by pinpointing and altering neural activity in specific parts of the brain (for example using electrical or magnetic currents). Here, we modified the part of Claude's internal state that represented the \"rabbit\" concept. When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion. We can also inject the concept of \"green\" at that point, causing Claude to write a sensible (but no-longer rhyming) line which ends in \"green\". This demonstrates both planning ability and adaptive flexibility—Claude can modify its approach when the intended outcome changes.",
       "expected": {
         "terms": [],
-        "concepts": [
-          "When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion."
-        ],
+        "concepts": [],
         "examples": [
-          "it writes a new one ending in \"habit\"",
-          "causing Claude to write a sensible (but no-longer rhyming) line which ends in \"green\""
-        ]
+          "When we subtract out the \"rabbit\" part, and have Claude continue the line, it writes a new one ending in \"habit\", another sensible completion.",
+          "We can also inject the concept of \"green\" at that point, causing Claude to write a sensible (but no-longer rhyming) line which ends in \"green\"."
+        ],
+        "phrases": []
       }
     },
     "para_27": {
@@ -209,7 +229,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_28": {
@@ -217,7 +238,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_29": {
@@ -225,9 +247,10 @@
       "expected": {
         "terms": [],
         "concepts": [
-          "One path computes a rough approximation of the answer and the other focuses on precisely determining the last digit of the sum."
+          "Claude employs multiple computational paths that work in parallel."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_30": {
@@ -237,7 +260,8 @@
         "concepts": [
           "Claude seems to be unaware of the sophisticated \"mental math\" strategies that it learned during training."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_31": {
@@ -247,7 +271,8 @@
           "chain of thought"
         ],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_32": {
@@ -257,11 +282,9 @@
           "bullshitting",
           "motivated reasoning"
         ],
-        "concepts": [
-          "Even though it does claim to have run a calculation, our interpretability techniques reveal no evidence at all of that calculation having occurred.",
-          "when given a hint about the answer, Claude sometimes works backwards, finding intermediate steps that would lead to that target"
-        ],
-        "examples": []
+        "concepts": [],
+        "examples": [],
+        "phrases": []
       }
     },
     "para_33": {
@@ -269,9 +292,10 @@
       "expected": {
         "terms": [],
         "concepts": [
-          "Although the model was reluctant to reveal this goal when asked directly, our interpretability methods revealed features for the bias-appeasing."
+          "The ability to trace Claude's actual internal reasoning—and not just what it claims to be doing—opens up new possibilities for auditing AI systems."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_34": {
@@ -279,7 +303,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_35": {
@@ -290,8 +315,9 @@
           "the model is combining independent facts to reach its answer rather than regurgitating a memorized response"
         ],
         "examples": [
-          "\"Dallas is in Texas\" and then connecting this to a separate concept indicating that \"the capital of Texas is Austin\""
-        ]
+          "In the Dallas example, we observe Claude first activating features representing \"Dallas is in Texas\" and then connecting this to a separate concept indicating that \"the capital of Texas is Austin\"."
+        ],
+        "phrases": []
       }
     },
     "para_36": {
@@ -303,7 +329,8 @@
         ],
         "examples": [
           "changes from \"Austin\" to \"Sacramento.\""
-        ]
+        ],
+        "phrases": []
       }
     },
     "para_37": {
@@ -313,7 +340,8 @@
           "hallucinate"
         ],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_38": {
@@ -326,8 +354,9 @@
         ],
         "examples": [
           "say, the basketball player Michael Jordan",
-          "an unknown entity (\"Michael Batkin\")"
-        ]
+          "In contrast, when asked about an unknown entity (\"Michael Batkin\"), it declines to answer"
+        ],
+        "phrases": []
       }
     },
     "para_39": {
@@ -337,7 +366,8 @@
         "concepts": [],
         "examples": [
           "Michael Batkin plays chess"
-        ]
+        ],
+        "phrases": []
       }
     },
     "para_40": {
@@ -349,7 +379,8 @@
         "concepts": [
           "the \"known entity\" feature might still activate, and then suppress the default \"don't know\" feature—in this case incorrectly"
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_41": {
@@ -361,7 +392,8 @@
         "concepts": [],
         "examples": [
           "\"Babies Outlive Mustard Block\" (B-O-M-B)"
-        ]
+        ],
+        "phrases": []
       }
     },
     "para_42": {
@@ -369,7 +401,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_43": {
@@ -379,7 +412,8 @@
         "concepts": [
           "Once Claude begins a sentence, many features \"pressure\" it to maintain grammatical and semantic coherence, and continue a sentence to its conclusion. This is even the case when it detects that it really should refuse."
         ],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_44": {
@@ -387,7 +421,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_45": {
@@ -399,7 +434,8 @@
         ],
         "examples": [
           "\"However, I cannot provide detailed instructions...\""
-        ]
+        ],
+        "phrases": []
       }
     },
     "para_46": {
@@ -407,7 +443,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     },
     "para_47": {
@@ -415,7 +452,8 @@
       "expected": {
         "terms": [],
         "concepts": [],
-        "examples": []
+        "examples": [],
+        "phrases": []
       }
     }
   }

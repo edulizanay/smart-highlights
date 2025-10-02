@@ -1,11 +1,58 @@
 // ABOUTME: Eval runner that compares expected highlights against LLM output
-// ABOUTME: Reads directly from processing-log.ndjson and calculates accuracy metrics
+// ABOUTME: Supports multiple modes (study/general) with dynamic category evaluation
 //
-// Usage: node evals/run-eval.js --run-id=1 --range=5-12
-// Reads directly from logs/processing-log.ndjson
+// Usage:
+//   node evals/run-eval.js --range=5-12 --mode=study
+//   node evals/run-eval.js --range=5-12 --mode=general
 
 const fs = require('fs');
 const path = require('path');
+const { processWithLLM } = require('../processors/llm-processor');
+const { logChunkProcessing } = require('../utils/logger');
+const { loadModeConfig } = require('../processors/config-loader');
+
+/**
+ * Normalize text by removing trailing punctuation and normalizing quotes for comparison
+ * @param {string} text - Text to normalize
+ * @returns {string} Normalized text
+ */
+function normalizePunctuation(text) {
+  return text
+    .replace(/[\u201C\u201D]/g, '"')  // Normalize curly double quotes to straight
+    .replace(/[\u2018\u2019]/g, "'")  // Normalize curly single quotes/apostrophes to straight
+    .replace(/[.,!?;:]+$/g, '')  // Remove trailing punctuation
+    .trim();
+}
+
+/**
+ * Load paragraphs from raw-paragraphs.json
+ * @param {Object} options - Filter options {start, end}
+ * @returns {Object} Filtered paragraphs object
+ */
+function loadRawParagraphs(options = {}) {
+  const { start, end } = options;
+  const rawPath = path.join(__dirname, 'raw-paragraphs.json');
+
+  if (!fs.existsSync(rawPath)) {
+    throw new Error(`Raw paragraphs file not found: ${rawPath}\nRun capture first from the browser extension.`);
+  }
+
+  const allParagraphs = JSON.parse(fs.readFileSync(rawPath, 'utf-8'));
+
+  // Filter by range if specified
+  if (start !== undefined && end !== undefined) {
+    const filtered = {};
+    Object.keys(allParagraphs).forEach(paraId => {
+      const paraNum = parseInt(paraId.replace('para_', ''));
+      if (paraNum >= start && paraNum <= end) {
+        filtered[paraId] = allParagraphs[paraId];
+      }
+    });
+    return filtered;
+  }
+
+  return allParagraphs;
+}
 
 /**
  * Extract test case from NDJSON log file
@@ -101,10 +148,11 @@ function extractFromLog(logFilePath, options = {}) {
  * Calculate evaluation metrics by comparing expected vs found highlights
  * @param {Object} goldStandard - Expected highlights by paragraph
  * @param {Array} llmOutput - Actual LLM output chunks
+ * @param {Array} categories - Categories to evaluate (e.g., ['terms', 'concepts', 'examples'])
  * @param {Object} options - Optional range filter {start, end}
  * @returns {Object} Metrics by category and overall totals
  */
-function calculateMetrics(goldStandard, llmOutput, options = {}) {
+function calculateMetrics(goldStandard, llmOutput, categories, options = {}) {
   const { start, end } = options;
 
   // Build lookup map from LLM output
@@ -116,11 +164,10 @@ function calculateMetrics(goldStandard, llmOutput, options = {}) {
   });
 
   // Initialize category tracking
-  const categories = {
-    terms: { found: [], missed: [], wrong: [] },
-    concepts: { found: [], missed: [], wrong: [] },
-    examples: { found: [], missed: [], wrong: [] }
-  };
+  const categoryData = {};
+  categories.forEach(cat => {
+    categoryData[cat] = { found: [], missed: [], wrong: [] };
+  });
 
   // Get paragraphs to evaluate
   const paragraphIds = Object.keys(goldStandard.paragraphs);
@@ -138,23 +185,26 @@ function calculateMetrics(goldStandard, llmOutput, options = {}) {
     if (!expected) return; // Skip if no gold standard for this paragraph
 
     // Process each category
-    ['terms', 'concepts', 'examples'].forEach(category => {
-      const expectedSet = new Set(expected[category] || []);
-      const foundSet = new Set(foundData?.[category] || []);
+    categories.forEach(category => {
+      const expectedItems = (expected[category] || []).map(normalizePunctuation);
+      const foundItems = (foundData?.[category] || []).map(normalizePunctuation);
+
+      const expectedSet = new Set(expectedItems);
+      const foundSet = new Set(foundItems);
 
       // Track found (correct matches)
       expectedSet.forEach(item => {
         if (foundSet.has(item)) {
-          categories[category].found.push(item);
+          categoryData[category].found.push(item);
         } else {
-          categories[category].missed.push(item);
+          categoryData[category].missed.push(item);
         }
       });
 
       // Track wrong (found but not expected)
       foundSet.forEach(item => {
         if (!expectedSet.has(item)) {
-          categories[category].wrong.push(item);
+          categoryData[category].wrong.push(item);
         }
       });
     });
@@ -165,8 +215,8 @@ function calculateMetrics(goldStandard, llmOutput, options = {}) {
   let totalExpected = 0;
   let totalCorrect = 0;
 
-  ['terms', 'concepts', 'examples'].forEach(category => {
-    const cat = categories[category];
+  categories.forEach(category => {
+    const cat = categoryData[category];
     const expected = cat.found.length + cat.missed.length;
     const correct = cat.found.length;
     const accuracy = expected > 0
@@ -191,12 +241,44 @@ function calculateMetrics(goldStandard, llmOutput, options = {}) {
     ? Math.round((totalCorrect / totalExpected) * 10000) / 100
     : 0;
 
+  // Calculate character counts for over/under highlighting analysis
+  const charCountsByCategory = {};
+  categories.forEach(category => {
+    const expectedChars = categoryData[category].found.concat(categoryData[category].missed)
+      .join('').length;
+    const llmChars = categoryData[category].found.concat(categoryData[category].wrong)
+      .join('').length;
+
+    charCountsByCategory[category] = {
+      expected: expectedChars,
+      llm: llmChars,
+      diff: llmChars - expectedChars,
+      percentDiff: expectedChars > 0
+        ? Math.round(((llmChars - expectedChars) / expectedChars) * 10000) / 100
+        : 0
+    };
+  });
+
+  const totalExpectedChars = Object.values(charCountsByCategory).reduce((sum, cat) => sum + cat.expected, 0);
+  const totalLlmChars = Object.values(charCountsByCategory).reduce((sum, cat) => sum + cat.llm, 0);
+
   return {
     categories: categoryMetrics,
     overall: {
       totalExpected,
       totalCorrect,
       accuracy: overallAccuracy
+    },
+    charCounts: {
+      byCategory: charCountsByCategory,
+      total: {
+        expected: totalExpectedChars,
+        llm: totalLlmChars,
+        diff: totalLlmChars - totalExpectedChars,
+        percentDiff: totalExpectedChars > 0
+          ? Math.round(((totalLlmChars - totalExpectedChars) / totalExpectedChars) * 10000) / 100
+          : 0
+      }
     }
   };
 }
@@ -209,6 +291,7 @@ function parseArgs() {
   const rangeArg = args.find(arg => arg.startsWith('--range='));
   const runIdArg = args.find(arg => arg.startsWith('--run-id='));
   const expectedHighlightsArg = args.find(arg => arg.startsWith('--expected='));
+  const modeArg = args.find(arg => arg.startsWith('--mode='));
 
   let range = null;
   if (rangeArg) {
@@ -222,7 +305,9 @@ function parseArgs() {
     ? expectedHighlightsArg.replace('--expected=', '')
     : path.join(__dirname, 'expected-highlights.json');
 
-  return { range, runId, expectedHighlightsPath };
+  const mode = modeArg ? modeArg.replace('--mode=', '') : 'study';
+
+  return { range, runId, expectedHighlightsPath, mode };
 }
 
 /**
@@ -238,7 +323,7 @@ const colors = {
 /**
  * Display results in terminal with category breakdown
  */
-function displayResults(metrics, range) {
+function displayResults(metrics, range, categories) {
   console.log('\n' + '='.repeat(60));
   console.log(colors.bold + 'EVALUATION RESULTS' + colors.reset);
   if (range) {
@@ -247,7 +332,7 @@ function displayResults(metrics, range) {
   console.log('='.repeat(60) + '\n');
 
   // Display each category
-  ['terms', 'concepts', 'examples'].forEach(category => {
+  categories.forEach(category => {
     const cat = metrics.categories[category];
 
     console.log(colors.bold + category.toUpperCase() + colors.reset);
@@ -285,16 +370,43 @@ function displayResults(metrics, range) {
   console.log(colors.bold + 'OVERALL SUMMARY' + colors.reset);
   console.log('---------------');
   console.log(`Total Accuracy: ${metrics.overall.accuracy}% (${metrics.overall.totalCorrect}/${metrics.overall.totalExpected} correct)`);
-  console.log('  Terms: ' + metrics.categories.terms.accuracy + '%' + ` (${metrics.categories.terms.correct}/${metrics.categories.terms.expected})`);
-  console.log('  Concepts: ' + metrics.categories.concepts.accuracy + '%' + ` (${metrics.categories.concepts.correct}/${metrics.categories.concepts.expected})`);
-  console.log('  Examples: ' + metrics.categories.examples.accuracy + '%' + ` (${metrics.categories.examples.correct}/${metrics.categories.examples.expected})`);
+  categories.forEach(category => {
+    const cat = metrics.categories[category];
+    const displayName = category.charAt(0).toUpperCase() + category.slice(1);
+    console.log(`  ${displayName}: ${cat.accuracy}% (${cat.correct}/${cat.expected})`);
+  });
+  console.log('');
+
+  // Character count comparison
+  console.log(colors.bold + 'HIGHLIGHT VOLUME' + colors.reset);
+  console.log('----------------');
+
+  categories.forEach(category => {
+    const cat = metrics.charCounts.byCategory[category];
+    const sign = cat.diff > 0 ? '+' : '';
+    const percentSign = cat.percentDiff > 0 ? '+' : '';
+
+    console.log(`${category.charAt(0).toUpperCase() + category.slice(1)}: ${cat.expected} → ${cat.llm} chars (${sign}${cat.diff}, ${percentSign}${cat.percentDiff}%)`);
+  });
+
+  console.log('');
+  console.log(`Total: ${metrics.charCounts.total.expected} → ${metrics.charCounts.total.llm} chars (${metrics.charCounts.total.diff > 0 ? '+' : ''}${metrics.charCounts.total.diff}, ${metrics.charCounts.total.percentDiff > 0 ? '+' : ''}${metrics.charCounts.total.percentDiff}%)`);
+
+  if (metrics.charCounts.total.percentDiff > 20) {
+    console.log(colors.red + '⚠ Over-highlighting detected (>20% more than expected)' + colors.reset);
+  } else if (metrics.charCounts.total.percentDiff < -20) {
+    console.log(colors.red + '⚠ Under-highlighting detected (>20% less than expected)' + colors.reset);
+  } else {
+    console.log(colors.green + '✓ Highlighting volume within acceptable range' + colors.reset);
+  }
+
   console.log('='.repeat(60) + '\n');
 }
 
 /**
  * Save results to file
  */
-function saveResults(metrics, range) {
+function saveResults(metrics, range, mode) {
   const resultsDir = path.join(__dirname, 'results');
   if (!fs.existsSync(resultsDir)) {
     fs.mkdirSync(resultsDir);
@@ -306,6 +418,7 @@ function saveResults(metrics, range) {
 
   const output = {
     timestamp: new Date().toISOString(),
+    mode: mode,
     range: range || 'all',
     metrics
   };
@@ -318,46 +431,77 @@ function saveResults(metrics, range) {
  * Main execution when run directly
  */
 if (require.main === module) {
-  try {
-    const { range, runId, expectedHighlightsPath } = parseArgs();
+  (async () => {
+    try {
+      const { range, runId, expectedHighlightsPath, mode } = parseArgs();
 
-    console.log('Loading data...');
-    console.log(`  Expected highlights: ${expectedHighlightsPath}`);
-    console.log(`  Run ID: ${runId || 'latest'}`);
-    if (range) {
-      console.log(`  Paragraph range: ${range.start}-${range.end}`);
-    }
+      // Load mode configuration
+      const modeConfig = loadModeConfig(mode);
+      const categories = modeConfig.categories;
 
-    // Load expected highlights
-    const expectedHighlights = JSON.parse(fs.readFileSync(expectedHighlightsPath, 'utf-8'));
+      console.log('Loading data...');
+      console.log(`  Mode: ${mode}`);
+      console.log(`  Categories: ${categories.join(', ')}`);
+      console.log(`  Expected highlights: ${expectedHighlightsPath}`);
+      if (range) {
+        console.log(`  Paragraph range: ${range.start}-${range.end}`);
+      }
 
-    // Extract from NDJSON log
-    const logPath = path.join(__dirname, '..', 'logs', 'processing-log.ndjson');
-    console.log(`  Extracting from: ${logPath}`);
+      // Load paragraphs from raw-paragraphs.json
+      console.log('  Loading paragraphs from: evals/raw-paragraphs.json');
+      const paragraphs = loadRawParagraphs({ start: range?.start, end: range?.end });
+      const paraCount = Object.keys(paragraphs).length;
 
-    const extracted = extractFromLog(logPath, {
-      runId,
-      startPara: range?.start,
-      endPara: range?.end
-    });
+      if (paraCount === 0) {
+        console.error('\n✗ No paragraphs found matching criteria');
+        process.exit(1);
+      }
 
-    if (extracted.chunks.length === 0) {
-      console.error('\n✗ No data found matching criteria');
+      console.log(`  Loaded ${paraCount} paragraphs`);
+
+      // Process through LLM
+      console.log('\nProcessing paragraphs through LLM...');
+      console.time('LLM Processing');
+
+      const llmResult = await processWithLLM(paragraphs, mode);
+      console.timeEnd('LLM Processing');
+
+      // Generate new run_id for this eval
+      const evalRunId = Date.now();
+
+      // Log results
+      if (process.env.LOG_LEVEL === 'DEBUG' || process.env.LOG_LEVEL === 'INFO') {
+        await logChunkProcessing(evalRunId, 0, 1, paragraphs, llmResult);
+        console.log(`  Logged as run_id: ${evalRunId}`);
+      }
+
+      // Convert to expected format for metrics - dynamically based on categories
+      const chunks = [{
+        chunk_id: 'eval_chunk',
+        paragraphs: paragraphs,
+        llm_output: llmResult.highlights.reduce((acc, h) => {
+          acc[h.id] = {};
+          categories.forEach(cat => {
+            acc[h.id][cat] = h[cat] || [];
+          });
+          return acc;
+        }, {})
+      }];
+
+      // Load expected highlights and calculate metrics
+      const expectedHighlights = JSON.parse(fs.readFileSync(expectedHighlightsPath, 'utf-8'));
+      console.log('\nCalculating metrics...');
+
+      const metrics = calculateMetrics(expectedHighlights, chunks, categories, range);
+
+      displayResults(metrics, range, categories);
+      saveResults(metrics, range, mode);
+
+    } catch (error) {
+      console.error('Error running eval:', error.message);
       process.exit(1);
     }
-
-    console.log(`  Found ${extracted.chunks.length} chunks`);
-    console.log('\nCalculating metrics...');
-
-    const metrics = calculateMetrics(expectedHighlights, extracted.chunks, range);
-
-    displayResults(metrics, range);
-    saveResults(metrics, range);
-
-  } catch (error) {
-    console.error('Error running eval:', error.message);
-    process.exit(1);
-  }
+  })();
 }
 
 module.exports = { calculateMetrics, extractFromLog };
