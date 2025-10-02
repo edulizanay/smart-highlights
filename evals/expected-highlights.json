@@ -9,16 +9,26 @@
           "This means that we don't understand how models do most of the things they do."
         ],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "Language models",
+          "aren't programmed directly by humans—instead, they're trained on large amounts of data",
+          "they learn their own strategies to solve problems",
+          "we don't understand how models do most of the things they do"
+        ]
       }
     },
     "para_6": {
-      "text": "Knowing how models like Claude think would allow us to have a better understanding of their abilities, as well as help us ensure that they’re doing what we intend them to. For example:",
+      "text": "Knowing how models like Claude think would allow us to have a better understanding of their abilities, as well as help us ensure that they're doing what we intend them to. For example:",
       "expected": {
         "terms": [],
         "concepts": [],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "Knowing how models",
+          "think would allow us to",
+          "understanding of their abilities, as well as help",
+          "ensure that they're doing what we intend them to"
+        ]
       }
     },
     "para_7": {
@@ -58,7 +68,11 @@
           "So we look inside."
         ],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "We",
+          "try to build a kind of AI microscope that",
+          "let us identify patterns of activity and flows of information"
+        ]
       }
     },
     "para_11": {
@@ -71,18 +85,24 @@
         ],
         "concepts": [],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "In the first paper, we",
+          "link those concepts together into computational \"circuits\""
+        ]
       }
     },
     "para_12": {
-      "text": "Claude sometimes thinks in a conceptual space that is shared between languages, suggesting it has a kind of universal “language of thought.” We show this by translating simple sentences into multiple languages and tracing the overlap in how Claude processes them.",
+      "text": "Claude sometimes thinks in a conceptual space that is shared between languages, suggesting it has a kind of universal "language of thought." We show this by translating simple sentences into multiple languages and tracing the overlap in how Claude processes them.",
       "expected": {
         "terms": [
           "language of thought"
         ],
         "concepts": [],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "Claude sometimes thinks in a conceptual space that is shared between languages, suggesting",
+          "a kind of universal \"language of thought\""
+        ]
       }
     },
     "para_13": {
@@ -91,7 +111,9 @@
         "terms": [],
         "concepts": [],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "Claude will plan what it will say many words ahead"
+        ]
       }
     },
     "para_14": {
@@ -102,7 +124,9 @@
           "We are able to \"catch it in the act\" as it makes up its fake reasoning"
         ],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "Claude, on occasion, will give a plausible-sounding argument designed to agree with the user rather than to follow logical steps"
+        ]
       }
     },
     "para_15": {
@@ -111,16 +135,22 @@
         "terms": [],
         "concepts": [],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "Claude's default behavior is to decline to speculate when asked a question, and it only answers questions when something inhibits this default reluctance"
+        ]
       }
     },
     "para_16": {
-      "text": "These findings aren’t just scientifically interesting—they represent significant progress towards our goal of understanding AI systems and making sure they’re reliable. We also hope they prove useful to other groups, and potentially, in other domains: for example, interpretability techniques have found use in fields such as medical imaging and genomics, as dissecting the internal mechanisms of models trained for scientific applications can reveal new insight about the science.",
+      "text": "These findings aren't just scientifically interesting—they represent significant progress towards our goal of understanding AI systems and making sure they're reliable. We also hope they prove useful to other groups, and potentially, in other domains: for example, interpretability techniques have found use in fields such as medical imaging and genomics, as dissecting the internal mechanisms of models trained for scientific applications can reveal new insight about the science.",
       "expected": {
         "terms": [],
         "concepts": [],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "These findings",
+          "represent significant progress towards",
+          "understanding AI systems and making sure they're reliable"
+        ]
       }
     },
     "para_17": {
@@ -131,16 +161,21 @@
           "our method only captures a fraction of the total computation performed by Claude"
         ],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "we recognize the limitations of our current approach. Even on short, simple prompts, our method only captures a fraction of the total computation performed by Claude"
+        ]
       }
     },
     "para_18": {
-      "text": "As AI systems are rapidly becoming more capable and are deployed in increasingly important contexts, Anthropic is investing in a portfolio of approaches including realtime monitoring, model character improvements, and the science of alignment. Interpretability research like this is one of the highest-risk, highest-reward investments, a significant scientific challenge with the potential to provide a unique tool for ensuring that AI is transparent. Transparency into the model’s mechanisms allows us to check whether it’s aligned with human values—and whether it’s worthy of our trust.",
+      "text": "As AI systems are rapidly becoming more capable and are deployed in increasingly important contexts, Anthropic is investing in a portfolio of approaches including realtime monitoring, model character improvements, and the science of alignment. Interpretability research like this is one of the highest-risk, highest-reward investments, a significant scientific challenge with the potential to provide a unique tool for ensuring that AI is transparent. Transparency into the model's mechanisms allows us to check whether it's aligned with human values—and whether it's worthy of our trust.",
       "expected": {
         "terms": [],
         "concepts": [],
         "examples": [],
-        "phrases": []
+        "phrases": [
+          "Interpretability research",
+          "is one of the highest-risk, highest-reward investments, a significant scientific challenge with the potential to provide a unique tool for ensuring that AI is transparent. Transparency into the model's mechanisms allows us to check whether it's aligned with human values—and whether it's worthy of our trust"
+        ]
       }
     },
     "para_19": {
