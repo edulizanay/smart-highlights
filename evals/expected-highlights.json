@@ -92,7 +92,7 @@
       }
     },
     "para_12": {
-      "text": "Claude sometimes thinks in a conceptual space that is shared between languages, suggesting it has a kind of universal "language of thought." We show this by translating simple sentences into multiple languages and tracing the overlap in how Claude processes them.",
+      "text": "Claude sometimes thinks in a conceptual space that is shared between languages, suggesting it has a kind of universal \"language of thought.\" We show this by translating simple sentences into multiple languages and tracing the overlap in how Claude processes them.",
       "expected": {
         "terms": [
           "language of thought"
