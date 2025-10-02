@@ -4,31 +4,104 @@ prompts:
     model: "x-ai/grok-4-fast:free"
     system_prompt: ""
     user_prompt: |
-      Given these paragraphs from a web article, identify the most important phrases to highlight. Use thinking tags to annotate, then
+      You are a highlighting assistant that extracts only the essential concepts from text. Your goal is to identify the minimum text needed to understand the core message—the conceptual skeleton, not the elaboration.
 
-      Return a JSON object with this exact format:
+      Here is the text you need to analyze:
+
+      <text>
+            {{PARAGRAPHS_JSON}}
+      </text>
+
+      Follow this process:
+
+      1. **Identify the main purpose**: What is the overall message or key takeaways of the text?
+
+      2. **Find core ideas**: For each paragraph, ask "What is the ONE core idea here?"
+
+      3. **Highlight minimally**: Extract only the words that convey that core idea. Cut everything else:
+        - Remove redundant phrases (e.g., "During that training process" when we just said "trained")
+        - Remove verbose wrappers (e.g., "This means that" → just highlight the actual meaning)
+        - Remove examples and elaborations unless they introduce NEW concepts
+        - Keep proper nouns/specific terms only when they're the subject being explained
+
+      4. **Test comprehension**: A reader should be able to read ONLY the highlights and grasp the gist.
+
+      Here are examples of good vs bad highlighting:
+
+      **Original:** "Language models like Claude aren't programmed directly by humans—instead, they're trained on large amounts of data. During that training process, they learn their own strategies to solve problems."
+
+      **Good highlighting:** "Language models aren't programmed directly by humans—instead, they're trained on large amounts of data." + "They learn their own strategies to solve problems."
+
+      **Bad highlighting:** "Language models like Claude aren't programmed directly by humans—instead, they're trained on large amounts of data. During that training process, they learn their own strategies to solve problems." ← Too much redundancy and unnecessary detail
+
+
+      <example1>
+        ## Example 1: Over-highlighting vs Minimal Highlighting
+
+        **Text**: "Neural networks are computational models inspired by biological brains. During the training process, these networks learn to recognize patterns by adjusting millions of internal parameters. This approach has revolutionized fields like computer vision and natural language processing."
+
+        <thinking>
+          Let me identify what's truly essential vs what's elaboration:
+
+          Sentence 1: "Neural networks are computational models inspired by biological brains"
+          - Core concept: "Neural networks" (the subject being defined)
+          - What they are: "computational models" 
+          - The "inspired by biological brains" part is interesting context but not essential to the gist
+          - ❌ DON'T highlight: the entire sentence
+          - ✅ DO highlight: just "Neural networks" and "computational models"
+
+          Sentence 2: "During the training process, these networks learn to recognize patterns by adjusting millions of internal parameters"
+          - "During the training process" is redundant wrapper language
+          - Core mechanism: "learn to recognize patterns"
+          - "by adjusting millions of internal parameters" explains HOW, but it's elaboration
+          - ❌ DON'T highlight: "During the training process, these networks learn to recognize patterns by adjusting millions of internal parameters"
+          - ✅ DO highlight: just "learn to recognize patterns"
+
+          Sentence 3: "This approach has revolutionized fields like computer vision and natural language processing"
+          - Impact/application: "revolutionized" + the fields
+          - ✅ DO highlight: "revolutionized computer vision and natural language processing"
+        </thinking>
+
+        <response>
+          {
+            "highlights": [
+              {
+                "id": "para_0",
+                "phrases": [
+                  "Neural networks",
+                  "computational models",
+                  "learn to recognize patterns",
+                  "revolutionized computer vision and natural language processing"
+                ]
+              }
+            ]
+          }
+        </response>
+
+        <explanation>
+        **Key principle**: Extract PHRASES, not sentences. Remove:
+        - Connector words ("During the training process", "This means that")
+        - Elaborative details ("inspired by biological brains", "by adjusting millions of parameters")
+        - Redundant context that repeats information already stated
+        
+        A reader seeing only these 4 short phrases gets the gist: Neural networks are computational models that learn patterns and have revolutionized CV/NLP.
+        </explanation>
+      </example1>
+
+
+
+
+      Use <thinking> tags to analyze the text thoroughly, then return a JSON object with this exact format in <response> tags:
+
       {
         "highlights": [
-          {"id": "para_0", "phrases": ["key phrase one", "important detail"]}
+          {"id": "para_0", "phrases": ["key phrase one", "important detail"]},
+          {"id": "para_1", "phrases": ["another key concept"]}
         ]
       }
 
-      in <response> tags.
 
-      Example: If para_3 contains "The president announced new policies today regarding climate change", you might return:
-
-      <thinking>
-      This paragraph discusses government policy announcements. Key phrases: "president announced", "new policies", "climate change" - these are the most important parts.
-      </thinking>
-
-      <response>
-      {"highlights": [{"id": "para_3", "phrases": ["president announced", "new policies", "climate change"]}]}
-      </response>
-
-      Only include paragraphs with important content. Return 2-3 key phrases per paragraph.
-
-      Paragraphs:
-      {{PARAGRAPHS_JSON}}
+      Each paragraph should get its own object with an id like "para_0", "para_1", etc., and the "phrases" array should contain the minimal highlighted text segments from that paragraph.
 
   study_mode:
     categories: ["terms", "concepts", "examples"]
