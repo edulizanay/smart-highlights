@@ -452,7 +452,6 @@ function createAnnotation(summaryText) {
   textElement.style.width = '100%';
   textElement.style.wordWrap = 'break-word';
   textElement.style.overflowWrap = 'break-word';
-  textElement.style.paddingRight = '20px'; // Space for delete button
 
   // Show delete button on annotation hover
   annotation.addEventListener('mouseenter', () => {
