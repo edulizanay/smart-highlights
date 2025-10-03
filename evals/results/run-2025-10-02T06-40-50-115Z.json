@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-10-02T06:40:50.115Z",
+  "mode": "study",
+  "range": {
+    "start": 9,
+    "end": 15
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 5,
+        "correct": 3,
+        "accuracy": 60,
+        "found": [
+          "AI microscope",
+          "AI biology",
+          "features"
+        ],
+        "missed": [
+          "circuits",
+          "language of thought"
+        ],
+        "wrong": [
+          "computational \"circuits\"",
+          "universal \"language of thought\""
+        ]
+      },
+      "concepts": {
+        "expected": 2,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "So we look inside",
+          "We are able to \"catch it in the act\" as it makes up its fake reasoning"
+        ],
+        "wrong": [
+          "try to build a kind of AI microscope that will let us identify patterns of activity and flows of information",
+          "we extend our prior work locating interpretable concepts (\"features\") inside a model to link those concepts together into computational \"circuits\", revealing parts of the pathway that transforms the words that go into Claude into the words that come out",
+          "Claude sometimes thinks in a conceptual space that is shared between languages",
+          "Claude will plan what it will say many words ahead, and write to get to that destination",
+          "Claude, on occasion, will give a plausible-sounding argument designed to agree with the user rather than to follow logical steps",
+          "Claude's default behavior is to decline to speculate when asked a question, and it only answers questions when something inhibits this default reluctance",
+          "the model recognized it had been asked for dangerous information well before it was able to gracefully bring the conversation back around"
+        ]
+      },
+      "examples": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "We show this in the realm of poetry, where it thinks of possible rhyming words in advance and writes the next line to get there",
+          "We show this by asking it for help on a hard math problem while giving it an incorrect hint. We are able to \"catch it in the act\" as it makes up its fake reasoning",
+          "In the poetry case study, we had set out to show that the model didn't plan ahead, and found instead that it did",
+          "In a study of hallucinations",
+          "In a response to an example jailbreak"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 7,
+      "totalCorrect": 3,
+      "accuracy": 42.86
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 58,
+          "llm": 86,
+          "diff": 28,
+          "percentDiff": 48.28
+        },
+        "concepts": {
+          "expected": 87,
+          "llm": 945,
+          "diff": 858,
+          "percentDiff": 986.21
+        },
+        "examples": {
+          "expected": 0,
+          "llm": 467,
+          "diff": 467,
+          "percentDiff": 0
+        }
+      },
+      "total": {
+        "expected": 145,
+        "llm": 1498,
+        "diff": 1353,
+        "percentDiff": 933.1
+      }
+    }
+  }
+}

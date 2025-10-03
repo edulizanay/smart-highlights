@@ -19,3 +19,6 @@ Thumbs.db
 
 # Test coverage
 coverage/
+
+# Eval results
+evals/results/

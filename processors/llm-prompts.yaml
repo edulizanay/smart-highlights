@@ -1,75 +1,334 @@
 prompts:
   general_mode:
+    categories: ["phrases"]
     model: "x-ai/grok-4-fast:free"
     system_prompt: ""
     user_prompt: |
-      Given these paragraphs from a web article, identify the most important phrases to highlight. Use thinking tags to annotate, then
+      You are a highlighting assistant that extracts only the essential concepts from text. Your goal is to identify the minimum text needed to understand the core message—the conceptual skeleton, not the elaboration.
 
-      Return a JSON object with this exact format:
+      Here is the text you need to analyze:
+
+      <text>
+            {{PARAGRAPHS_JSON}}
+      </text>
+
+      Follow this process:
+
+      1. **Identify the main purpose**: What is the overall message or key takeaways of the text?
+
+      2. **Find core ideas**: For each paragraph, ask "What is the ONE core idea here?"
+
+      3. **Highlight minimally**: Extract only the words that convey that core idea. Cut everything else:
+        - Remove redundant phrases (e.g., "During that training process" when we just said "trained")
+        - Remove verbose wrappers (e.g., "This means that" → just highlight the actual meaning)
+        - Remove examples and elaborations unless they introduce NEW concepts
+        - Keep proper nouns/specific terms only when they're the subject being explained
+
+      4. **Test comprehension**: A reader should be able to read ONLY the highlights and grasp the gist.
+
+      Here are examples of good vs bad highlighting:
+
+      **Original:** "Language models like Claude aren't programmed directly by humans—instead, they're trained on large amounts of data. During that training process, they learn their own strategies to solve problems."
+
+      **Good highlighting:** "Language models aren't programmed directly by humans—instead, they're trained on large amounts of data." + "They learn their own strategies to solve problems."
+
+      **Bad highlighting:** "Language models like Claude aren't programmed directly by humans—instead, they're trained on large amounts of data. During that training process, they learn their own strategies to solve problems." ← Too much redundancy and unnecessary detail
+
+
+      <example1>
+        ## Example 1: Over-highlighting vs Minimal Highlighting
+
+        **Text**: "Neural networks are computational models inspired by biological brains. During the training process, these networks learn to recognize patterns by adjusting millions of internal parameters. This approach has revolutionized fields like computer vision and natural language processing."
+
+        <thinking>
+          Let me identify what's truly essential vs what's elaboration:
+
+          Sentence 1: "Neural networks are computational models inspired by biological brains"
+          - Core concept: "Neural networks" (the subject being defined)
+          - What they are: "computational models" 
+          - The "inspired by biological brains" part is interesting context but not essential to the gist
+          - ❌ DON'T highlight: the entire sentence
+          - ✅ DO highlight: just "Neural networks" and "computational models"
+
+          Sentence 2: "During the training process, these networks learn to recognize patterns by adjusting millions of internal parameters"
+          - "During the training process" is redundant wrapper language
+          - Core mechanism: "learn to recognize patterns"
+          - "by adjusting millions of internal parameters" explains HOW, but it's elaboration
+          - ❌ DON'T highlight: "During the training process, these networks learn to recognize patterns by adjusting millions of internal parameters"
+          - ✅ DO highlight: just "learn to recognize patterns"
+
+          Sentence 3: "This approach has revolutionized fields like computer vision and natural language processing"
+          - Impact/application: "revolutionized" + the fields
+          - ✅ DO highlight: "revolutionized computer vision and natural language processing"
+        </thinking>
+
+        <response>
+          {
+            "highlights": [
+              {
+                "id": "para_0",
+                "phrases": [
+                  "Neural networks",
+                  "computational models",
+                  "learn to recognize patterns",
+                  "revolutionized computer vision and natural language processing"
+                ]
+              }
+            ]
+          }
+        </response>
+
+        <explanation>
+        **Key principle**: Extract PHRASES, not sentences. Remove:
+        - Connector words ("During the training process", "This means that")
+        - Elaborative details ("inspired by biological brains", "by adjusting millions of parameters")
+        - Redundant context that repeats information already stated
+        
+        A reader seeing only these 4 short phrases gets the gist: Neural networks are computational models that learn patterns and have revolutionized CV/NLP.
+        </explanation>
+      </example1>
+
+
+
+
+      Use <thinking> tags to analyze the text thoroughly, then return a JSON object with this exact format in <response> tags:
+
       {
         "highlights": [
-          {"id": "para_0", "phrases": ["key phrase one", "important detail"]}
+          {"id": "para_0", "phrases": ["key phrase one", "important detail"]},
+          {"id": "para_1", "phrases": ["another key concept"]}
         ]
       }
 
-      in <response> tags.
 
-      Example: If para_3 contains "The president announced new policies today regarding climate change", you might return:
-
-      <thinking>
-      This paragraph discusses government policy announcements. Key phrases: "president announced", "new policies", "climate change" - these are the most important parts.
-      </thinking>
-
-      <response>
-      {"highlights": [{"id": "para_3", "phrases": ["president announced", "new policies", "climate change"]}]}
-      </response>
-
-      Only include paragraphs with important content. Return 2-3 key phrases per paragraph.
-
-      Paragraphs:
-      {{PARAGRAPHS_JSON}}
+      Each paragraph should get its own object with an id like "para_0", "para_1", etc., and the "phrases" array should contain the minimal highlighted text segments from that paragraph.
 
   study_mode:
+    categories: ["terms", "concepts", "examples"]
     model: "x-ai/grok-4-fast:free"
     system_prompt: ""
     user_prompt: |
       You are a student learning from study materials, and you are highlighting important information. You will receive chunks of text, and your job is to highlight important phrases in three types:
 
-      1. CONCEPTS: Definitions, key terms, important concepts being introduced or defined
-      2. FACTS: Specific data, statistics, names, dates, concrete factual information
-      3. EXAMPLES: Examples, analogies, applications, or illustrations of concepts
+      1. TERMS: Vocabulary words being introduced or defined for the first time in this text
+      2. CONCEPTS: Core ideas, mechanisms, findings, or explanations being presented (the "thesis sentence")
+      3. EXAMPLES: Concrete instances, analogies, or illustrations that help readers visualize abstract concepts
 
-      Rules:
-      - Only highlight terms as CONCEPTS if they are being defined or introduced in this text
-      - Don't over-highlight—focus on what's truly important for studying
+      # Category Guidelines
 
-      Use <thinking> tags to analyze the text, then return a JSON object with this exact format in <response> tags:
+      ## TERMS - Vocabulary Being Introduced
+      **What to highlight**: ONLY the term itself (just the word/phrase), NOT the definition
+      **Recognition signals** (need multiple, not just one):
+      - First appearance in the text
+      - Followed by definition language: "is", "refers to", "means", "is defined as", "—that is"
+      - Author is teaching this vocabulary, not just using it
+
+
+      **Test**: "If skimming, does this highlight help me quickly find where this term is being introduced?"
+      
+      ## CONCEPTS - Ideas Being Explained
+      **What to highlight**: The thesis sentence - the ONE sentence (max 2) that captures the core mechanism, finding, or insight
+      **Purpose**: Help someone reviewing later quickly re-grasp the key idea
+
+      **What to INCLUDE**:
+      - The sentence stating the mechanism/finding most directly
+      - The conclusion or "how it works" statement
+      - The core insight, not the journey to it
+
+      **What to EXCLUDE**:
+      - Setup or context leading to the insight
+      - Examples used to support the concept
+      - Implications or "so what" discussion
+      - Methodology describing how it was discovered
+      - Repetitions or restatements
+
+      **Test**: "If reviewing later, would this sentence alone re-trigger my understanding of the mechanism?"
+
+      ## EXAMPLES - Illustrations Helping Understanding
+
+      **What to highlight**: Concrete instances PLUS the framing that signals illustrative intent
+
+      **Purpose**: Help readers visualize what an abstract concept looks like in practice
+
+      **Critical distinction**: 
+      - ILLUSTRATION = Concrete instance presented to help readers understand
+      - METHODOLOGY = Description of what researchers/authors tested (NOT an example)
+
+      **Must have BOTH**:
+      1. Concrete specificity (you can point to it: "this phrase," "this case," "this scenario")
+      2. Illustrative framing (signals it's meant to help you understand something)
+
+      **Recognition signals to INCLUDE**:
+      - "For example," / "For instance," / "Consider..."
+      - "Take the case of..." / "Look at..." / "Notice how..."
+      - "Say," / "Such as" (when introducing illustrative cases)
+      - "This is similar to..." / "This explains why..."
+      - Comparative structures: "Instead of X, try Y..."
+
+      **What NOT to highlight as examples**:
+      - "We tested X" or "We investigated Y" (methodology)
+      - Facts or data stated without illustrative purpose
+      - Passing references or mentions
+
+      **Test**: "Does this help me SEE/PICTURE what the abstract concept means, and is the illustrative intent clear from the framing?"
+
+      Only include paragraphs with important content. Not every paragraph needs all three types.
+
+      <examples>
+        <example1>
+          ## Example 1: Psychology Text
+
+          **Text**: "Cognitive load refers to the total amount of mental effort being used in working memory. When learners face too much information at once, their performance drops significantly. For instance, students trying to solve math problems while memorizing formulas simultaneously show 40% lower accuracy than those who learn each skill separately."
+
+          <thinking>
+            Let me analyze each sentence:
+
+            1. "Cognitive load refers to the total amount of mental effort being used in working memory"
+              - "Cognitive load" is being DEFINED (has "refers to") - I should highlight it as a TERM
+              - The definition itself "the total amount of mental effort being used in working memory" explains WHAT it is - this is a CONCEPT
+
+            2. "When learners face too much information at once, their performance drops significantly"
+              - This explains the MECHANISM - what happens when cognitive load is too high
+              - This is the thesis sentence about how it works
+              - Highlight as CONCEPT
+
+            3. "For instance, students trying to solve math problems while memorizing formulas simultaneously show 40% lower accuracy than those who learn each skill separately"
+              - "For instance" signals this is an EXAMPLE. It provides a concrete scenario illustrating the concept
+              - Highlight the full sentence INCLUDING "For instance" as an EXAMPLE
+          </thinking>
+
+          <response>
+            {
+              "highlights": [
+                {
+                  "id": "para_1",
+                  "terms": ["Cognitive load"],
+                  "concepts": ["the total amount of mental effort being used in working memory", "When learners face too much information at once, their performance drops significantly"],
+                  "examples": ["For instance, students trying to solve math problems while memorizing formulas simultaneously show 40% lower accuracy than those who learn each skill separately"]
+                }
+              ]
+            }
+          </response>
+
+          <explanation>
+          **Explanation**: 
+          - TERM: Just "Cognitive load" (not the definition) - helps someone skimming find the vocabulary
+          - CONCEPTS: Two key ideas - (1) what it IS and (2) what HAPPENS when it's overloaded
+          - EXAMPLE: Includes "For instance" framing + the concrete scenario that helps visualize the concept
+          </explanation>
+        </example1>
+
+        <example2>
+          ## Example 2: Nothing to Highlight
+
+          **Text**: "Machine learning algorithms have transformed data analysis across industries. Researchers continue to explore optimization techniques to improve model accuracy. Our team evaluated performance metrics using standard benchmarks. These advances will likely influence future applications in healthcare and finance."
+
+          <thinking>
+          Analyzing each sentence:
+
+          1. "Machine learning algorithms have transformed data analysis across industries"
+            - "Machine learning algorithms" - just MENTIONED, not DEFINED
+            - "transformed" - general claim, not a core idea/finding/explanation being presented
+            - SKIP
+
+          2. "Researchers continue to explore optimization techniques to improve model accuracy"
+            - General statement about ongoing work
+            - No term defined, no core idea or finding explained
+            - SKIP
+
+          3. "Our team evaluated performance metrics using standard benchmarks"
+            - "Our team evaluated..." - METHODOLOGY (research process)
+            - Not a concrete instance illustrating a concept
+            - SKIP
+
+          4. "These advances will likely influence future applications in healthcare and finance"
+            - Vague implication about future
+            - "healthcare and finance" mentioned without concrete framing or specific instances
+            - Not presenting a finding or illustrating with examples
+            - SKIP
+
+          Nothing meets criteria - no terms being defined, no core ideas/findings/explanations presented, no concrete instances with illustrative framing.
+          </thinking>
+
+          <response>
+          {
+            "highlights": []
+          }
+          </response>
+
+          <explanation>
+          **Explanation**: This paragraph contains no highlightable content because:
+          - Terms are mentioned but not defined
+          - Statements are general claims, not core ideas or findings being explained
+          - Methodology ("Our team evaluated") is not a concrete illustration
+          - Applications mentioned lack concrete instances or framing
+          </explanation>
+        </example2>
+        
+        <example3>
+          ## Example: Separating Thesis from Support
+
+          **Text**: "Compound interest accelerates wealth growth exponentially. When you reinvest earnings, each dollar generates returns on both the principal and previous gains. Over a 30-year period, this compounding effect can turn $10,000 into over $76,000 at just 7% annual returns, compared to $31,000 with simple interest."
+
+          <thinking>
+            Analyzing the structure:
+
+            1. "Compound interest accelerates wealth growth exponentially" 
+              - This is the THESIS - the core mechanism being explained
+              - Captures the entire concept in one sentence
+              
+            2. "When you reinvest earnings, each dollar generates returns on both the principal and previous gains"
+              - This is SUPPORTING DETAIL - explains HOW it works
+              - Adds the mechanism but isn't the nucleus itself
+              
+            3. "Over a 30-year period, this compounding effect can turn $10,000 into over $76,000..."
+              - This is a CONCRETE ILLUSTRATION with numbers -- this is an EXAMPLE
+
+            Only highlight the thesis: "Compound interest accelerates wealth growth exponentially" and the example
+          </thinking>
+
+          <response>
+          {
+            "highlights": [
+              {
+                "id": "para_1",
+                "concepts": ["Compound interest accelerates wealth growth exponentially"]
+                "examples": ["this compounding effect can turn $10,000 into over $76,000 at just 7% annual returns, compared to $31,000 with simple interest"]
+
+              }
+            ]
+          }
+          </response>
+
+          <explanation>
+          "Compound interest accelerates wealth growth exponentially" is the core complete insight - someone reading just this understands what compound interest does.
+          - The sentence after is an ELABORATION
+          </explanation>    
+        </example3>
+      </examples>
+
+      # Output Format
+      
+      Use <thinking> tags to analyze the text thoroughly, then return a JSON object with this exact format in <response> tags:
 
       {
         "highlights": [
           {
             "id": "para_0",
-            "concepts": ["term being defined"],
-            "facts": ["complete factual statement"],
-            "examples": ["full example phrase"]
+            "terms": ["the name of the term"],
+            "concepts": ["thesis sentence capturing the mechanism - 1 or two sentences"],
+            "examples": ["framing + concrete instance"]
           }
         ]
       }
 
-      Example: If para_3 contains "Machine learning is a type of AI that learns from data. In 2024, Google achieved 87% accuracy using neural networks. OpenAI reported similar results. This is similar to teaching a child to recognize patterns."
+      # Remember:
+      1. **Terms**: Highlight ONLY the vocabulary word itself when it's being DEFINED (not just mentioned)
+      2. **Concepts**: Find the ONE or TWO thesis sentence that captures the mechanism/finding (not the whole explanation)
+      3. **Examples**: Include framing signals + concrete instance (not methodology or passing references)
+      4. **Balance**: Aim for the nucleus, not the whole cell - trust that context provides the rest
 
-      <thinking>
-      - "Machine learning" is being defined/introduced - this is a CONCEPT
-      - "In 2024, Google achieved 87% accuracy" and "OpenAI reported similar results" are factual statements - these are FACTS
-      - "similar to teaching a child to recognize patterns" is an analogy explaining the concept - this is an EXAMPLE
-      - "AI" is only mentioned, not defined, so skip it
-      </thinking>
-
-      <response>
-      {"highlights": [{"id": "para_3", "concepts": ["Machine learning"], "facts": ["In 2024, Google achieved 87% accuracy", "OpenAI reported similar results"], "examples": ["similar to teaching a child to recognize patterns"]}]}
-      </response>
-
-      Only include paragraphs with important content. Not every paragraph needs all three types.
+      Now analyze the following paragraphs:
 
       Paragraphs:
       {{PARAGRAPHS_JSON}}

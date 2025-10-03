@@ -1,0 +1,45 @@
+{
+  "timestamp": "2025-10-02T06:41:05.042Z",
+  "mode": "general",
+  "range": {
+    "start": 10,
+    "end": 10
+  },
+  "metrics": {
+    "categories": {
+      "phrases": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "take inspiration from the field of neuroscience",
+          "build a kind of AI microscope",
+          "identify patterns of activity and flows of information"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 0,
+      "totalCorrect": 0,
+      "accuracy": 0
+    },
+    "charCounts": {
+      "byCategory": {
+        "phrases": {
+          "expected": 0,
+          "llm": 130,
+          "diff": 130,
+          "percentDiff": 0
+        }
+      },
+      "total": {
+        "expected": 0,
+        "llm": 130,
+        "diff": 130,
+        "percentDiff": 0
+      }
+    }
+  }
+}

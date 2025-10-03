@@ -1,0 +1,72 @@
+{
+  "timestamp": "2025-10-01T07:33:19.272Z",
+  "range": {
+    "start": 5,
+    "end": 12
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 5,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "AI microscope",
+          "AI biology",
+          "features",
+          "circuits",
+          "language of thought"
+        ],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 2,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [
+          "This means that we don't understand how models do most of the things they do.",
+          "So we look inside."
+        ],
+        "wrong": [
+          "Language models",
+          "Training process",
+          "Strategies",
+          "Inscrutable",
+          "how models like Claude think",
+          "fabricating a plausible argument for a foregone conclusion",
+          "neuroscience",
+          "AI microscope",
+          "microscope",
+          "AI biology",
+          "interpretable concepts (\"features\")",
+          "computational \"circuits\"",
+          "conceptual space that is shared between languages",
+          "universal “language of thought”"
+        ]
+      },
+      "examples": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": [
+          "like Claude",
+          "What language, if any, is it using \"in its head\"?",
+          "Is it only focusing on predicting the next word or does it ever plan ahead?",
+          "humans (even neuroscientists) don't know all the details of how our own brains work",
+          "pathway that transforms the words that go into Claude into the words that come out",
+          "simple tasks representative of ten crucial model behaviors",
+          "translating simple sentences into multiple languages and tracing the overlap in how Claude processes them"
+        ]
+      }
+    },
+    "overall": {
+      "totalExpected": 7,
+      "totalCorrect": 0,
+      "accuracy": 0
+    }
+  }
+}

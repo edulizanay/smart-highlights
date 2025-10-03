@@ -5,12 +5,19 @@
 // Configuration constants
 const CONFIG = {
   HIGHLIGHT_DELAY_MS: 400,
-  CHUNK_MAX_CHARS: 500,
+  CHUNK_MAX_CHARS: 1000,
   DOM_READY_DELAY_MS: 500,
   MIN_PARAGRAPHS_FOR_BUTTON: 4,
   MIN_TEXT_LENGTH: 30,
   MAX_CONCURRENT_REQUESTS: 2,
   API_ENDPOINT: 'http://localhost:3000/extract'
+};
+
+// Mock data for summary panel testing
+const MOCK_SUMMARIES = {
+  para_5: "Compound interest accelerates wealth exponentially over long time periods",
+  para_8: "Cognitive load theory explains how information overload reduces learning performance",
+  para_12: "Neural networks learn patterns through training on data, not direct programming"
 };
 
 // Helper: Escape special regex characters
@@ -62,14 +69,14 @@ function applyHighlights(highlightsData, options = {}) {
 
       if (!phraseData) return;
 
-      // Handle new format: {concepts: [], facts: [], examples: []}
+      // Handle new format: {concepts: [], terms: [], examples: []}
       if (phraseData.concepts) {
         phraseData.concepts.forEach(phrase => {
           allHighlights.push({ element, phrase, colorClass: 'smart-highlight-concept' });
         });
       }
-      if (phraseData.facts) {
-        phraseData.facts.forEach(phrase => {
+      if (phraseData.terms) {
+        phraseData.terms.forEach(phrase => {
           allHighlights.push({ element, phrase, colorClass: 'smart-highlight-fact' });
         });
       }
@@ -111,15 +118,15 @@ function applyHighlights(highlightsData, options = {}) {
 
       let modifiedHtml = element.innerHTML;
 
-      // Handle new format: {concepts: [], facts: [], examples: []}
+      // Handle new format: {concepts: [], terms: [], examples: []}
       if (phraseData.concepts) {
         phraseData.concepts.forEach(phrase => {
           modifiedHtml = applyPhrase({ innerHTML: modifiedHtml }, phrase, 'smart-highlight-concept');
           totalHighlights++;
         });
       }
-      if (phraseData.facts) {
-        phraseData.facts.forEach(phrase => {
+      if (phraseData.terms) {
+        phraseData.terms.forEach(phrase => {
           modifiedHtml = applyPhrase({ innerHTML: modifiedHtml }, phrase, 'smart-highlight-fact');
           totalHighlights++;
         });
@@ -243,13 +250,14 @@ setTimeout(() => {
 }, CONFIG.DOM_READY_DELAY_MS);
 
 // Process chunks with limited concurrency to maintain order and avoid API flooding
-async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2, mode = 'study') {
+async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent = 2, mode = 'study', runId = null) {
   let index = 0;
 
   // Process a single chunk and return its identity with the result
   const processChunk = async (chunk) => {
     try {
-      const response = await fetch(CONFIG.API_ENDPOINT, {
+      const url = runId ? `${CONFIG.API_ENDPOINT}?run_id=${runId}` : CONFIG.API_ENDPOINT;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -317,11 +325,183 @@ async function processConcurrentChunks(chunks, onChunkProcessed, maxConcurrent =
   }
 }
 
+// Extract paragraphs from already-tagged DOM elements (p, li only)
+function extractParagraphs() {
+  const taggedElements = document.querySelectorAll('[data-highlight-id]');
+  const extractedData = {};
+
+  taggedElements.forEach(element => {
+    const id = element.getAttribute('data-highlight-id');
+    const text = element.textContent.trim();
+    if (text.length > CONFIG.MIN_TEXT_LENGTH) {
+      extractedData[id] = text;
+    }
+  });
+
+  return extractedData;
+}
+
+// Create pig SVG icon (no positioning, just the icon element)
+function createPigIcon() {
+  const icon = document.createElement('div');
+  icon.className = 'summary-pig-icon';
+  icon.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <path d="M15 11v.01" />
+      <path d="M16 3l0 3.803a6.019 6.019 0 0 1 2.658 3.197h1.341a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-1.342a6.008 6.008 0 0 1 -1.658 2.473v2.027a1.5 1.5 0 0 1 -3 0v-.583a6.04 6.04 0 0 1 -1 .083h-4a6.04 6.04 0 0 1 -1 -.083v.583a1.5 1.5 0 0 1 -3 0v-2l0 -.027a6 6 0 0 1 4 -10.473h2.5l4.5 -3z" />
+    </svg>
+  `;
+
+  // Style the icon
+  icon.style.cursor = 'pointer';
+  icon.style.opacity = '0.6';
+  icon.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+  icon.style.color = '#9333ea';
+  icon.style.flexShrink = '0';
+
+  // Hover effect
+  icon.addEventListener('mouseenter', () => {
+    icon.style.opacity = '1';
+    icon.style.transform = 'scale(1.1)';
+  });
+
+  icon.addEventListener('mouseleave', () => {
+    icon.style.opacity = '0.6';
+    icon.style.transform = 'scale(1)';
+  });
+
+  return icon;
+}
+
+// Inject pig icons and annotations for paragraphs with summaries
+function injectSummaryIcons() {
+  Object.keys(MOCK_SUMMARIES).forEach(paraId => {
+    const paragraph = document.querySelector(`[data-highlight-id="${paraId}"]`);
+    if (paragraph && !paragraph.querySelector('.summary-wrapper')) {
+      // Make paragraph position relative
+      const currentPosition = window.getComputedStyle(paragraph).position;
+      if (currentPosition === 'static') {
+        paragraph.style.position = 'relative';
+      }
+
+      // Create wrapper container for icon + annotation
+      const wrapper = document.createElement('div');
+      wrapper.className = 'summary-wrapper';
+      wrapper.setAttribute('data-para-id', paraId);
+      wrapper.style.position = 'absolute';
+      wrapper.style.left = '100%';
+      wrapper.style.marginLeft = '20px';
+      wrapper.style.top = '0';
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      wrapper.style.alignItems = 'flex-start';
+
+      // Create and append pig icon
+      const icon = createPigIcon();
+      wrapper.appendChild(icon);
+
+      // Create annotation (hidden by default)
+      const summaryText = MOCK_SUMMARIES[paraId];
+      const annotation = createAnnotation(summaryText);
+      wrapper.appendChild(annotation);
+
+      // Add click handler to icon to toggle annotation visibility
+      icon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleAnnotation(paraId);
+      });
+
+      // Append wrapper to paragraph
+      paragraph.appendChild(wrapper);
+    }
+  });
+}
+
+// Create annotation (no positioning, just the content element)
+function createAnnotation(summaryText) {
+  // Create annotation container
+  const annotation = document.createElement('div');
+  annotation.className = 'summary-annotation';
+  annotation.style.display = 'none'; // Initially hidden
+  annotation.style.maxWidth = '280px';
+  annotation.style.paddingRight = '20px';
+  annotation.style.marginTop = '8px';
+  annotation.style.position = 'relative';
+
+  // Create delete button container (top-right)
+  const deleteButton = document.createElement('span');
+  deleteButton.textContent = '×';
+  deleteButton.style.position = 'absolute';
+  deleteButton.style.top = '0';
+  deleteButton.style.right = '0';
+  deleteButton.style.color = '#9333ea';
+  deleteButton.style.fontSize = '18px';
+  deleteButton.style.cursor = 'pointer';
+  deleteButton.style.opacity = '0';
+  deleteButton.style.transition = 'opacity 0.2s ease';
+
+  // Create text element
+  const textElement = document.createElement('div');
+  textElement.textContent = summaryText;
+  textElement.style.color = '#9333ea';
+  textElement.style.fontSize = '14px';
+  textElement.style.lineHeight = '1.5';
+  textElement.style.fontStyle = 'italic';
+  textElement.style.opacity = '0.9';
+  textElement.style.width = '100%';
+  textElement.style.wordWrap = 'break-word';
+  textElement.style.overflowWrap = 'break-word';
+
+  // Show delete button on annotation hover
+  annotation.addEventListener('mouseenter', () => {
+    deleteButton.style.opacity = '0.7';
+  });
+
+  annotation.addEventListener('mouseleave', () => {
+    deleteButton.style.opacity = '0';
+  });
+
+  // Delete button hover effect
+  deleteButton.addEventListener('mouseenter', () => {
+    deleteButton.style.opacity = '1';
+  });
+
+  // Hide annotation on click (don't remove from DOM)
+  deleteButton.addEventListener('click', () => {
+    annotation.style.display = 'none';
+  });
+
+  annotation.appendChild(textElement);
+  annotation.appendChild(deleteButton);
+
+  return annotation;
+}
+
+// Toggle annotation visibility within wrapper
+function toggleAnnotation(paragraphId) {
+  const wrapper = document.querySelector(`.summary-wrapper[data-para-id="${paragraphId}"]`);
+  if (!wrapper) return;
+
+  const annotation = wrapper.querySelector('.summary-annotation');
+  if (!annotation) return;
+
+  if (annotation.style.display === 'none') {
+    annotation.style.display = 'block';
+  } else {
+    annotation.style.display = 'none';
+  }
+}
+
 async function handleButtonClick() {
   if (isProcessing) return;
   isProcessing = true;
 
   console.time('Total Processing');
+
+  // Generate unique run_id for this highlighting session
+  const runId = Date.now();
+  console.log(`Starting new run: ${runId}`);
 
   // Get current mode from UI
   const currentMode = SmartUI.getMode();
@@ -331,17 +511,8 @@ async function handleButtonClick() {
   SmartUI.setButtonIcon('loader', true);
 
   try {
-    // Use the already-tagged elements from page load
-    const taggedElements = document.querySelectorAll('[data-highlight-id]');
-    const extractedData = {};
-
-    taggedElements.forEach(element => {
-      const id = element.getAttribute('data-highlight-id');
-      const text = element.textContent.trim();
-      if (text.length > CONFIG.MIN_TEXT_LENGTH) {
-        extractedData[id] = text;
-      }
-    });
+    // Extract paragraphs using reusable function
+    const extractedData = extractParagraphs();
 
     // Chunk the data for parallel processing
     const chunks = chunkParagraphs(extractedData, CONFIG.CHUNK_MAX_CHARS);
@@ -386,13 +557,19 @@ async function handleButtonClick() {
     console.time('Concurrent Processing');
 
     // Process chunks with limited concurrency
-    await processConcurrentChunks(chunks, handleChunkResponse, CONFIG.MAX_CONCURRENT_REQUESTS, currentMode);
+    await processConcurrentChunks(chunks, handleChunkResponse, CONFIG.MAX_CONCURRENT_REQUESTS, currentMode, runId);
 
     console.timeEnd('Concurrent Processing');
 
     // Check completion
     if (processedChunks.size === chunks.length) {
       console.log('All chunks processed successfully');
+
+      // Inject summary icons after highlights are applied
+      setTimeout(() => {
+        injectSummaryIcons();
+      }, 500);
+
       setTimeout(() => {
         console.timeEnd('Total Processing');
       }, 1000); // Small delay for final animations

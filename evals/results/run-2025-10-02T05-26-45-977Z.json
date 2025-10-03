@@ -1,0 +1,72 @@
+{
+  "timestamp": "2025-10-02T05:26:45.977Z",
+  "range": {
+    "start": 5,
+    "end": 5
+  },
+  "metrics": {
+    "categories": {
+      "terms": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": []
+      },
+      "concepts": {
+        "expected": 1,
+        "correct": 1,
+        "accuracy": 100,
+        "found": [
+          "This means that we don't understand how models do most of the things they do"
+        ],
+        "missed": [],
+        "wrong": [
+          "Language models like Claude aren't programmed directly by humans—instead, they're trained on large amounts of data"
+        ]
+      },
+      "examples": {
+        "expected": 0,
+        "correct": 0,
+        "accuracy": 0,
+        "found": [],
+        "missed": [],
+        "wrong": []
+      }
+    },
+    "overall": {
+      "totalExpected": 1,
+      "totalCorrect": 1,
+      "accuracy": 100
+    },
+    "charCounts": {
+      "byCategory": {
+        "terms": {
+          "expected": 0,
+          "llm": 0,
+          "diff": 0,
+          "percentDiff": 0
+        },
+        "concepts": {
+          "expected": 76,
+          "llm": 190,
+          "diff": 114,
+          "percentDiff": 150
+        },
+        "examples": {
+          "expected": 0,
+          "llm": 0,
+          "diff": 0,
+          "percentDiff": 0
+        }
+      },
+      "total": {
+        "expected": 76,
+        "llm": 190,
+        "diff": 114,
+        "percentDiff": 150
+      }
+    }
+  }
+}

@@ -11,6 +11,9 @@ const { logChunkProcessing } = require('./utils/logger');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Auto-incrementing run ID for tracking processing runs
+let lastRunId = 0;
+
 // CORS configuration for browser extension
 app.use(cors({
   origin: true, // Allow all origins for development (extension origins vary)
@@ -62,6 +65,9 @@ app.post('/extract', validateParagraphData, async (req, res) => {
   try {
     const { chunkIndex, totalChunks, paragraphs, mode } = req.body;
 
+    // Auto-increment run_id or use manual override from query param
+    const runId = req.query.run_id ? parseInt(req.query.run_id) : ++lastRunId;
+
     // Handle both old format (direct paragraphs) and new format (chunks)
     const actualParagraphs = paragraphs || req.body;
     const isChunkedRequest = chunkIndex !== undefined;
@@ -88,6 +94,7 @@ app.post('/extract', validateParagraphData, async (req, res) => {
         paragraphCount: Object.keys(actualParagraphs).length,
         message: 'Paragraphs received and processed successfully',
         highlights: llmResult.highlights,
+        run_id: runId,
         ...(isChunkedRequest && {
           chunkIndex,
           totalChunks
@@ -97,6 +104,7 @@ app.post('/extract', validateParagraphData, async (req, res) => {
       // Log asynchronously after response sent (non-blocking)
       if (process.env.LOG_LEVEL === 'DEBUG' || process.env.LOG_LEVEL === 'INFO') {
         logChunkProcessing(
+          runId,
           isChunkedRequest ? chunkIndex : 0,
           isChunkedRequest ? totalChunks : 1,
           actualParagraphs,
@@ -116,6 +124,7 @@ app.post('/extract', validateParagraphData, async (req, res) => {
         paragraphCount: Object.keys(actualParagraphs).length,
         message: 'Paragraphs received but LLM processing failed',
         highlights: [],
+        run_id: runId,
         llmError: true,
         errorMessage: error.message,
         ...(isChunkedRequest && {
@@ -142,6 +151,47 @@ app.all('/extract', (req, res) => {
     res.status(405).json({
       error: 'Method not allowed',
       message: 'Only POST requests are supported'
+    });
+  }
+});
+
+// POST /capture-paragraphs - save raw paragraphs for eval testing
+app.post('/capture-paragraphs', validateParagraphData, async (req, res) => {
+  try {
+    const { paragraphs } = req.body;
+    const actualParagraphs = paragraphs || req.body;
+
+    console.log('=== CAPTURING PARAGRAPHS ===');
+    console.log(`Paragraphs to capture: ${Object.keys(actualParagraphs).length}`);
+
+    // Save to evals/raw-paragraphs.json
+    const evalsDir = path.join(__dirname, 'evals');
+    const outputPath = path.join(evalsDir, 'raw-paragraphs.json');
+
+    // Ensure evals directory exists
+    if (!fs.existsSync(evalsDir)) {
+      fs.mkdirSync(evalsDir, { recursive: true });
+    }
+
+    // Write paragraphs to file
+    fs.writeFileSync(outputPath, JSON.stringify(actualParagraphs, null, 2));
+
+    console.log(`Saved to: ${outputPath}`);
+    console.log('=== CAPTURE COMPLETE ===');
+
+    res.json({
+      success: true,
+      paragraphCount: Object.keys(actualParagraphs).length,
+      message: 'Paragraphs captured successfully',
+      outputPath: outputPath
+    });
+
+  } catch (error) {
+    console.error('Error capturing paragraphs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to capture paragraphs',
+      message: error.message
     });
   }
 });
