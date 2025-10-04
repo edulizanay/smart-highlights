@@ -355,10 +355,11 @@ function createPigIcon() {
 
   // Style the icon
   icon.style.cursor = 'pointer';
-  icon.style.opacity = '0.6';
-  icon.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+  icon.style.opacity = '0';
+  icon.style.transition = 'opacity 0.3s ease, transform 0.2s ease';
   icon.style.color = '#9333ea';
   icon.style.flexShrink = '0';
+  icon.style.alignSelf = 'flex-start';
 
   // Hover effect
   icon.addEventListener('mouseenter', () => {
@@ -395,7 +396,9 @@ function injectSummaryIcons() {
       wrapper.style.top = '0';
       wrapper.style.display = 'flex';
       wrapper.style.flexDirection = 'column';
-      wrapper.style.alignItems = 'flex-start';
+      wrapper.style.alignItems = 'stretch';
+      wrapper.style.padding = '12px';
+      wrapper.style.width = '200px';
 
       // Create and append pig icon
       const icon = createPigIcon();
@@ -414,6 +417,11 @@ function injectSummaryIcons() {
 
       // Append wrapper to paragraph
       paragraph.appendChild(wrapper);
+
+      // Fade in icon
+      requestAnimationFrame(() => {
+        icon.style.opacity = '0.6';
+      });
     }
   });
 }
@@ -424,56 +432,22 @@ function createAnnotation(summaryText) {
   const annotation = document.createElement('div');
   annotation.className = 'summary-annotation';
   annotation.style.display = 'none'; // Initially hidden
-  annotation.style.maxWidth = '280px';
-  annotation.style.paddingRight = '20px';
   annotation.style.marginTop = '8px';
-  annotation.style.position = 'relative';
-
-  // Create delete button container (top-right)
-  const deleteButton = document.createElement('span');
-  deleteButton.textContent = '×';
-  deleteButton.style.position = 'absolute';
-  deleteButton.style.top = '0';
-  deleteButton.style.right = '0';
-  deleteButton.style.color = '#9333ea';
-  deleteButton.style.fontSize = '18px';
-  deleteButton.style.cursor = 'pointer';
-  deleteButton.style.opacity = '0';
-  deleteButton.style.transition = 'opacity 0.2s ease';
+  annotation.style.opacity = '0';
+  annotation.style.transition = 'opacity 0.3s ease';
 
   // Create text element
   const textElement = document.createElement('div');
   textElement.textContent = summaryText;
   textElement.style.color = '#9333ea';
-  textElement.style.fontSize = '14px';
+  textElement.style.fontSize = '16px';
   textElement.style.lineHeight = '1.5';
   textElement.style.fontStyle = 'italic';
-  textElement.style.opacity = '0.9';
   textElement.style.width = '100%';
   textElement.style.wordWrap = 'break-word';
   textElement.style.overflowWrap = 'break-word';
 
-  // Show delete button on annotation hover
-  annotation.addEventListener('mouseenter', () => {
-    deleteButton.style.opacity = '0.7';
-  });
-
-  annotation.addEventListener('mouseleave', () => {
-    deleteButton.style.opacity = '0';
-  });
-
-  // Delete button hover effect
-  deleteButton.addEventListener('mouseenter', () => {
-    deleteButton.style.opacity = '1';
-  });
-
-  // Hide annotation on click (don't remove from DOM)
-  deleteButton.addEventListener('click', () => {
-    annotation.style.display = 'none';
-  });
-
   annotation.appendChild(textElement);
-  annotation.appendChild(deleteButton);
 
   return annotation;
 }
@@ -488,8 +462,14 @@ function toggleAnnotation(paragraphId) {
 
   if (annotation.style.display === 'none') {
     annotation.style.display = 'block';
+    requestAnimationFrame(() => {
+      annotation.style.opacity = '1';
+    });
   } else {
-    annotation.style.display = 'none';
+    annotation.style.opacity = '0';
+    setTimeout(() => {
+      annotation.style.display = 'none';
+    }, 300);
   }
 }
 
