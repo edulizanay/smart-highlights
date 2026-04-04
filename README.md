@@ -1,52 +1,95 @@
+<!-- ABOUTME: README for smart-highlights, an AI browser extension with a built-in eval pipeline. -->
+<!-- ABOUTME: Uses LLMs to highlight key phrases, with gold-standard evaluation measuring accuracy and volume. -->
+
 # Smart Highlights
 
-An intelligent browser extension that uses AI to automatically highlight the most important phrases on web pages.
+**Browser extension that uses LLMs to intelligently highlight important phrases, with a built-in eval pipeline for measuring highlight quality.**
 
-## Features
+---
 
-- **AI-Powered Highlighting**: Uses Grok-4-Fast via OpenRouter to intelligently select important phrases
-- **Real-time Processing**: Extracts content and gets AI suggestions with one click
-- **Smart Parsing**: Advanced response parsing with thinking tags for reliable AI output
-- **Visual Feedback**: Clean highlighting with success/error indicators
+## What It Does
+
+Smart Highlights is a Chrome extension that reads any webpage and uses an LLM to identify and highlight the most important content. It supports two modes:
+
+- **Study mode** -- highlights terms (purple), concepts (yellow), and examples (orange) with distinct colors per category
+- **General mode** -- highlights key phrases across the page
+
+The extension chunks large pages, processes chunks concurrently through an LLM, and applies highlights with smooth animations. A floating button lets you switch modes on the fly.
+
+---
 
 ## Architecture
 
-- **Browser Extension** (`content.js`, `manifest.json`): Extracts page content and applies highlights
-- **Backend Server** (`server.js`): Processes content through OpenRouter LLM API
-- **AI Integration**: Uses structured prompts with thinking/response tags for reliable parsing
+```
++------------------+       +------------------+       +------------------+
+| Chrome Extension |  -->  | Express Server   |  -->  | OpenRouter API   |
+| (content.js)     |       | (server.js)      |       | (Grok model)     |
+|                  |       |                  |       |                  |
+| - DOM extraction |       | - /extract route |       | - Prompt from    |
+| - Chunking       |       | - LLM processor  |       |   YAML config    |
+| - Highlight      |       | - NDJSON logging |       | - JSON response  |
+|   application    |       |                  |       |                  |
++------------------+       +------------------+       +------------------+
+                                    |
+                           +--------v---------+
+                           | Eval Pipeline    |
+                           | (evals/)         |
+                           |                  |
+                           | - Gold standard  |
+                           | - Accuracy per   |
+                           |   category       |
+                           | - Volume analysis|
+                           | - 40+ eval runs  |
+                           +------------------+
+```
 
-## Setup
+---
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Eval Pipeline
 
-2. Create `.env` file with your OpenRouter API key:
-   ```
-   OPENROUTERAI_API_KEY=your_api_key_here
-   ```
+This is the part that matters for AI engineering. The project includes a full evaluation framework for measuring highlight quality:
 
-3. Start the backend server:
-   ```bash
-   npm start
-   ```
+**How it works:**
+1. `raw-paragraphs.json` -- captured page content (the input)
+2. `expected-highlights.json` -- human-annotated gold standard (what should be highlighted)
+3. `run-eval.js` -- sends paragraphs through the LLM, compares output against gold standard
 
-4. Load the extension in Chrome:
-   - Go to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked" and select this directory
+**Metrics calculated:**
+- **Accuracy per category** -- what percentage of expected terms/concepts/examples were found
+- **Missed items** -- expected highlights the LLM didn't catch
+- **Wrong items** -- highlights the LLM added that weren't in the gold standard
+- **Volume analysis** -- character-level comparison to detect over/under-highlighting (flags >20% deviation)
 
-## Usage
+**Usage:**
+```bash
+node evals/run-eval.js --mode=study --range=5-12
+```
 
-1. Navigate to any webpage with multiple paragraphs
-2. Click the 📝 floating button (appears on pages with >4 paragraphs)
-3. Wait for AI processing
-4. See intelligent highlights applied to important phrases
+Results are saved as timestamped JSON files in `evals/results/` for tracking quality across prompt iterations. The repo contains 40+ eval runs showing iterative prompt refinement.
 
-## Technology Stack
+---
 
-- **Backend**: Node.js, Express, OpenRouter API
-- **AI Model**: x-ai/grok-4-fast
-- **Frontend**: Vanilla JavaScript browser extension
-- **Parsing**: Custom response tag extraction for reliable AI output
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Extension | Chrome Manifest V3, vanilla JavaScript |
+| Backend | Node.js, Express |
+| LLM | OpenRouter API (Grok model, configurable) |
+| Prompts | YAML-based templates with mode-specific configurations |
+| Evals | Custom framework: gold-standard comparison, accuracy/volume metrics |
+| Testing | Unit tests for parsing, chunking, mode switching, backend integration |
+
+---
+
+## Running Locally
+
+```bash
+npm install
+cp .env.example .env        # Add OpenRouter API key
+npm start                    # Express server on :3000
+```
+
+Then load the extension in Chrome: `chrome://extensions/` > Developer mode > Load unpacked > select this directory.
+
+Test with `demo.html` or any article page with 4+ paragraphs.
